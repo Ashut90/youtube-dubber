@@ -1,0 +1,22 @@
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Python
+backend/__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Secrets — never commit your API key
+.env
+.env.*
+
+# Generated audio cache — too large for git, user builds on first run
+**/dubout/audio/
+**/dubout/caps*.vtt
+**/dubout/audio.wav
+
+# OS
+.DS_Store
+Thumbs.db

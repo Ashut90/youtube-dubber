@@ -1,5 +1,10 @@
 # YT Dubber
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+> **Want to try it or contribute? [Fork this repo](../../fork) — do not clone directly.**
+
 Desktop app that **dubs YouTube videos into Hindi (and 19 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
 
 Paste a YouTube URL, and the app plays the video while generating and playing a synced dub on top. It pulls the video's captions, translates them to natural spoken Hinglish, synthesizes neural speech, and plays everything in sync — with a live transcript and on-screen subtitles.
@@ -131,6 +136,17 @@ The Electron window stays a pure HTML/CSS control panel, which never crashes.
 ---
 
 ## Setup
+
+### 0. Fork & clone
+
+```bash
+# 1. Click "Fork" on GitHub first, then:
+git clone https://github.com/<YOUR_USERNAME>/yt-hindi-dubber.git
+cd yt-hindi-dubber
+git remote add upstream https://github.com/ahsutosh/yt-hindi-dubber.git
+```
+
+> Cloning the original repo directly means you can't contribute back. Fork first.
 
 ### 1. Backend (Python)
 
