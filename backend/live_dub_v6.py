@@ -56,7 +56,30 @@ from vad import PhraseDetector, FRAME_SIZE
 
 # ── Config ────────────────────────────────────────────────────────────────────
 CAPTURE_SOURCE   = "DubCapture.monitor"
-REAL_SPEAKER_SINK = "alsa_output.pci-0000_00_1f.3.analog-stereo"
+
+def _default_sink() -> str:
+    """Auto-detect the default audio output sink."""
+    try:
+        r = subprocess.run(["pactl", "get-default-sink"],
+                           capture_output=True, text=True)
+        sink = r.stdout.strip()
+        if sink:
+            return sink
+    except Exception:
+        pass
+    # Fallback: first non-DubCapture sink
+    try:
+        r = subprocess.run(["pactl", "list", "short", "sinks"],
+                           capture_output=True, text=True)
+        for line in r.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and "DubCapture" not in parts[1]:
+                return parts[1]
+    except Exception:
+        pass
+    return "alsa_output.pci-0000_00_1f.3.analog-stereo"   # last resort
+
+REAL_SPEAKER_SINK = _default_sink()
 CAPTURE_RATE     = 16000
 PLAY_RATE        = 24000
 BYTES_PER_SAMPLE = 2
