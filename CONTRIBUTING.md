@@ -5,6 +5,22 @@ UI improvements, performance work, or documentation.
 
 > **Rule #1: Fork the repo. Do not push directly to `main`.**
 
+> **Rule #2: This project is GPL-3.0. Your fork must:**
+> - Credit the original: **ahsutosh / yt-hindi-dubber**
+> - Stay open source under GPL-3.0
+> - State what you changed
+>
+> Silent forks that strip attribution or go closed-source violate the license.
+> If you want to discuss an exception, [open a Discussion](../../discussions).
+
+---
+
+## Before you start — say hello
+
+If you're planning a significant change (new feature, architecture change, new language),
+**open a Discussion first**. This avoids duplicate work and lets us align on direction
+before you invest time writing code.
+
 ---
 
 ## Workflow

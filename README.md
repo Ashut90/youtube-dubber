@@ -1,9 +1,14 @@
 # YT Dubber
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Discussions](https://img.shields.io/badge/💬-Discuss-blueviolet)](../../discussions)
 
 > **Want to try it or contribute? [Fork this repo](../../fork) — do not clone directly.**
+>
+> 🔒 **This project is GPL-3.0 licensed.** You must credit the original author and
+> keep your modifications open source. Forking for private/commercial use without
+> releasing your source code is not permitted. See [LICENSE](LICENSE).
 
 Desktop app that **dubs YouTube videos into Hindi (and 19 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
 
@@ -306,3 +311,32 @@ yt-hindi-dubber/
 | Want fresh translations | Delete the cache dir above to force regeneration. |
 
 Cache location: `~/.config/yt-dubber/dubout/audio/`.
+
+---
+
+## Contributing & Discussions
+
+Found a bug? Have an idea? Want to add a language or improve the dubbing quality?
+
+**Don't just fork silently — come talk:**
+
+- 💬 **[Start a Discussion](../../discussions)** — ideas, questions, show your fork
+- 🐛 **[Open an Issue](../../issues)** — bug reports
+- 🔀 **[Submit a PR](../../pulls)** — code contributions (read [CONTRIBUTING.md](CONTRIBUTING.md) first)
+
+If you've built something on top of this project, share it in Discussions — I want to see what people are creating.
+
+---
+
+## Credits & Attribution
+
+**Original project:** YT Dubber  
+**Author:** [ahsutosh](https://github.com/ahsutosh)  
+**License:** GPL-3.0 — see [LICENSE](LICENSE)
+
+If you fork this project, you **must**:
+1. Keep this credits section or link back to this repo
+2. State clearly what you changed
+3. License your fork under GPL-3.0
+
+Built with: [Groq API](https://groq.com) · [edge-tts](https://github.com/rany2/edge-tts) · [mpv](https://mpv.io) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [Electron](https://www.electronjs.org)
