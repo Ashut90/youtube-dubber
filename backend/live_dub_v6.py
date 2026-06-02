@@ -20,6 +20,7 @@ Run:
 import argparse
 import io
 import os
+import platform
 import queue
 import subprocess
 import sys
@@ -27,6 +28,17 @@ import tempfile
 import threading
 import time
 import wave
+
+# Live Dub requires PulseAudio (parec/pacat) — Linux only.
+if platform.system() != "Linux":
+    print(
+        f"\n❌  Live Dub is Linux-only (requires PulseAudio).\n"
+        f"    Your OS: {platform.system()}\n\n"
+        f"    Use the Video URL mode instead — it works on all platforms.\n"
+        f"    Paste a YouTube link in the app and click 'Dub It'.\n",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 import numpy as np
 

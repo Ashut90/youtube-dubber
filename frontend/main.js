@@ -164,6 +164,12 @@ async function playWithMpv(videoUrl) {
 
 // ── Live dubbing ──────────────────────────────────────────────────────────────
 ipcMain.handle('start-dub', (_e, lang, gender) => {
+    // Live Dub requires PulseAudio — only available on Linux
+    if (process.platform !== 'linux') {
+        send('dub-output', `⚠️  Live Dub is Linux-only (requires PulseAudio).\nUse the Video URL tab instead — it works on all platforms.`);
+        send('dub-stopped');
+        return;
+    }
     if (dubProcess) return;
     dubProcess = spawn(py, ['live_dub_v6.py', '--lang', lang, '--gender', gender], {
         cwd: backendDir, env: { ...process.env },
