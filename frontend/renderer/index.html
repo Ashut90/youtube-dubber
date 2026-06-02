@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>YT Dubber</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="logo"><span>🎙</span> YT Dubber</div>
+    <div id="badge" class="badge badge-idle">Idle</div>
+  </header>
+
+  <!-- ── Tab bar ── -->
+  <div class="tabs">
+    <button class="tab active" data-tab="video">📹 Video URL</button>
+    <button class="tab" data-tab="live">🎤 Live Dub</button>
+  </div>
+
+  <!-- ── Video URL tab ── -->
+  <div id="tab-video" class="tab-content">
+
+    <section class="controls">
+      <div class="url-row">
+        <input id="url-input" type="text" placeholder="Paste YouTube or video URL…" />
+        <button id="btn-process" class="btn-primary">▶ Dub It</button>
+      </div>
+
+      <div class="control-row">
+        <div class="field">
+          <label>Language</label>
+          <select id="lang-select-video">
+            <option value="hindi">Hindi</option>
+            <option value="tamil">Tamil</option>
+            <option value="telugu">Telugu</option>
+            <option value="bengali">Bengali</option>
+            <option value="marathi">Marathi</option>
+            <option value="gujarati">Gujarati</option>
+            <option value="kannada">Kannada</option>
+            <option value="malayalam">Malayalam</option>
+            <option value="punjabi">Punjabi</option>
+            <option value="urdu">Urdu</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
+            <option value="german">German</option>
+            <option value="japanese">Japanese</option>
+            <option value="chinese">Chinese</option>
+            <option value="korean">Korean</option>
+            <option value="arabic">Arabic</option>
+            <option value="portuguese">Portuguese</option>
+            <option value="russian">Russian</option>
+            <option value="italian">Italian</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Voice</label>
+          <div class="toggle-group">
+            <button class="toggle active" id="vid-btn-male"   data-g="male">Male</button>
+            <button class="toggle"        id="vid-btn-female" data-g="female">Female</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="progress-wrap" class="hidden">
+        <div class="progress-label" id="progress-label">Processing…</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Player (mpv plays in its own window; this shows subtitles + dub controls) -->
+    <div id="player-section" class="hidden">
+      <div class="mpv-banner">
+        <span class="mpv-icon">▶</span>
+        <span>Video playing in <strong>mpv</strong> window — keep it open</span>
+        <span id="mpv-time-display" class="mpv-time">0:00</span>
+      </div>
+
+      <div id="sub-overlay-standalone">
+        <div id="sub-orig"></div>
+        <div id="sub-dub"></div>
+      </div>
+
+      <div class="player-controls">
+        <label class="vol-label">
+          <span>🔇 Original</span>
+          <input type="range" id="orig-vol" min="0" max="1" step="0.05" value="0.3" />
+        </label>
+        <label class="vol-label">
+          <span>🔊 Dubbed</span>
+          <input type="range" id="dub-vol" min="0" max="1" step="0.05" value="1" />
+        </label>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Live dub tab ── -->
+  <div id="tab-live" class="tab-content hidden">
+    <section class="controls">
+      <div class="control-row">
+        <div class="field">
+          <label>Language</label>
+          <select id="lang-select-live">
+            <option value="hindi">Hindi</option>
+            <option value="tamil">Tamil</option>
+            <option value="telugu">Telugu</option>
+            <option value="bengali">Bengali</option>
+            <option value="marathi">Marathi</option>
+            <option value="gujarati">Gujarati</option>
+            <option value="kannada">Kannada</option>
+            <option value="malayalam">Malayalam</option>
+            <option value="punjabi">Punjabi</option>
+            <option value="urdu">Urdu</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
+            <option value="german">German</option>
+            <option value="japanese">Japanese</option>
+            <option value="chinese">Chinese</option>
+            <option value="korean">Korean</option>
+            <option value="arabic">Arabic</option>
+            <option value="portuguese">Portuguese</option>
+            <option value="russian">Russian</option>
+            <option value="italian">Italian</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Voice</label>
+          <div class="toggle-group">
+            <button class="toggle active" id="btn-male"   data-g="male">Male</button>
+            <button class="toggle"        id="btn-female" data-g="female">Female</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint">Route browser audio to <strong>DubCapture</strong> in pavucontrol first.</div>
+      <button id="btn-start" class="btn-primary">▶ Start Live Dubbing</button>
+    </section>
+
+    <section class="feed-section">
+      <div class="feed-header">
+        <span>Live Feed</span>
+        <button id="btn-clear" class="btn-ghost">Clear</button>
+      </div>
+      <div id="feed" class="feed">
+        <div class="feed-empty">Start live dubbing to see transcript here.</div>
+      </div>
+    </section>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

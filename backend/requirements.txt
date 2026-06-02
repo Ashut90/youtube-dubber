@@ -1,0 +1,10 @@
+# Video URL mode (dub_video.py) + Live Dub mode (live_dub_v6.py)
+edge-tts          # neural TTS (Microsoft, free)
+groq              # translation + Whisper STT (Live Dub)
+numpy             # audio framing (Live Dub / VAD)
+silero-vad        # voice-activity detection (Live Dub)
+
+# yt-dlp is also required and must be on PATH (video + captions):
+#   pip install -U yt-dlp
+# System tools required (install via your package manager):
+#   mpv, ffmpeg, pulseaudio-utils (parec/pacat, for Live Dub)

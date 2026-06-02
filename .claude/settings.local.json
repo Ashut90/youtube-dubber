@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(DISPLAY=:0 timeout 25 npm start)"
+    ]
+  }
+}
