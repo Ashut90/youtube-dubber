@@ -1,3 +1,6 @@
+# IDE / tool internals
+.claude/
+
 # Node
 frontend/node_modules/
 frontend/dist/
