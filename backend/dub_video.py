@@ -564,6 +564,15 @@ def main():
     vid = _video_id(args.url)
     audio_dir = OUT_DIR / "audio" / f"{vid}_{args.lang}_{args.gender}"
     audio_dir.mkdir(parents=True, exist_ok=True)
+
+    # Tell the UI which voice is being used so the user knows it's generating
+    existing = len(list(audio_dir.glob("seg_*.mp3")))
+    total_segs = len(segments)
+    if existing == 0:
+        progress("tts", 0, f"Generating {lang.name} ({args.gender}) dub from scratch — first run takes ~1 min…")
+    elif existing < total_segs:
+        progress("tts", int(existing/total_segs*100), f"Resuming {lang.name} ({args.gender}) dub — {existing}/{total_segs} cached…")
+
     asyncio.run(translate_tts_pipeline(segments, audio_dir))
 
     # 5. Final manifest
