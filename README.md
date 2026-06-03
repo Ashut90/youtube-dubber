@@ -46,82 +46,142 @@ The **video renders in a separate mpv window** (more on why below). The Electron
 
 ---
 
-## Architecture
+## How It Works
+
+### Mode 1 — Video URL (YouTube dubbing)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                         ELECTRON APP                               │
-│                                                                    │
-│  Renderer (renderer/app.js)          Main process (main.js)        │
-│  ────────────────────────────        ──────────────────────────    │
-│  • Control panel UI                  • spawns mpv (video window)    │
-│  • Subtitles + sliders               • mpv IPC socket: time-pos,   │
-│  • Buffer/sync logic                   pause, volume                │
-│  • Decides which dub clip       ───► • sequential dub-audio queue   │
-│    to play at the current              (mpv, one clip at a time)    │
-│    playhead                          • spawns Python backend        │
-│                                                                    │
-└───────────────────────────────┬──────────────────────────────────┘
-                                 │ JSON lines over stdout
-                                 ▼
-┌──────────────────────────────────────────────────────────────────┐
-│              PYTHON BACKEND — Video URL mode (dub_video.py)         │
-│                                                                    │
-│  yt-dlp ──► caption VTT ──► parse + merge into ~5s segments         │
-│      │                                                             │
-│      ▼  (batches of 20)                                            │
-│  Groq llama-3.1-8b-instant  ──  English → casual spoken Hinglish    │
-│      │   (retry on rate-limit, English fallback)                   │
-│      ▼                                                             │
-│  edge-tts (MadhurNeural / SwaraNeural)  ──  neural TTS (free)       │
-│      │   slang dictionary + URL/code stripping                     │
-│      ▼                                                             │
-│  ffmpeg atempo  ──  fit clip to its time window (≤1.4×, no chipmunk)│
-│      │                                                             │
-│      ▼                                                             │
-│  cache to disk: seg_NNNNN.mp3 + seg_NNNNN.json  ──  instant re-runs │
-└──────────────────────────────────────────────────────────────────┘
+USER pastes YouTube URL + picks Language + Voice → clicks Dub It
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1 · Video Stream                                          │
+│  yt-dlp fetches direct CDN URL → mpv opens video window        │
+│  mpv starts PAUSED (waits for dubbed audio buffer)             │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ meanwhile, in parallel...
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 2 · Captions                                              │
+│  yt-dlp downloads the video's native caption track (VTT)       │
+│  Auto-detects language → Arabic, Hindi, Chinese, English, etc. │
+│  Parses + merges caption blocks into clean ~5s segments        │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 3 · Translation  (batches of 20 segments)                 │
+│  Groq llama-3.1-8b-instant                                     │
+│  Any language → casual spoken Hinglish / target language       │
+│  Prompt tuned: "तो भाई", "यार", "बॉस" hooks, keep tech terms  │
+│  Post-processed: slang dict, URL strip, code → screen prompt   │
+│  Retry up to 6× on rate-limit; English fallback if all fail    │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 4 · Text-to-Speech                                        │
+│  edge-tts  (Microsoft Neural, free, internet required)         │
+│  Male → hi-IN-MadhurNeural  |  Female → hi-IN-SwaraNeural     │
+│  rate +12%, pitch +1Hz for energetic creator feel              │
+│  ffmpeg atempo: fit clip to time window, capped at 1.4×        │
+│  Saved to disk: seg_NNNNN.mp3 + seg_NNNNN.json (cached)       │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ segment ready → emit to Electron
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 5 · Playback Sync                                         │
+│  Once 6s of audio is buffered → mpv UNPAUSES                   │
+│  Each dub clip plays ONE AT A TIME (no mid-sentence cutoff)    │
+│  mpv IPC provides live time-pos → subtitles update in app      │
+│  If video catches up to generation frontier → mpv auto-pauses  │
+│  Clips > 4s behind video are dropped cleanly, not cut          │
+└─────────────────────────────────────────────────────────────────┘
+         │                          │
+         ▼                          ▼
+  mpv window                 Electron window
+  (video plays)         (subtitles + volume controls)
 ```
 
-### Two modes
-
-| Mode | Backend | Source of speech | Best for |
-|---|---|---|---|
-| **Video URL** | `backend/dub_video.py` | YouTube caption track (yt-dlp) | YouTube videos, courses, tutorials |
-| **Live Dub** | `backend/live_dub_v6.py` | System audio → Groq Whisper STT | Anything playing on your machine |
-
-### Source & target languages
-
-- **Source** can be any language. The Video URL mode reads the video's *declared*
-  language and pulls its native captions automatically (falling back to English,
-  then to Whisper transcription). Pass `--source-lang <code>` to force one.
-  Live Dub auto-detects the spoken language with Whisper.
-- **Target** is any of the 20 languages below. **Hindi** has the most-tuned
-  casual-creator prompt; the other 19 now also get an engaging, casual prompt
-  (using each language's natural fillers) rather than flat textbook translation.
+> **Second run on the same video?** Steps 3 + 4 are skipped entirely — cached
+> `.mp3` files load instantly and playback starts in seconds.
 
 ---
 
-## Why mpv instead of an in-app `<video>` player
+### Mode 2 — Live Dub (any system audio, Linux only)
 
-Early versions played video with an HTML5 `<video>` element + the Web Audio API inside Electron. On Linux machines with **Optimus (Intel + NVIDIA) graphics**, Chromium's software video/audio path **segfaults** (`exit code 139`) the moment it decodes video or creates an `AudioContext`.
-
-The fix was to stop using Chromium for media entirely:
-- **Video** plays in a real `mpv` window, launched and controlled by the Electron main process over mpv's JSON IPC socket (`time-pos`, `pause`, `volume`).
-- **Dubbed audio** plays as short `mpv` clips spawned by the main process — never touching the browser audio engine.
-
-The Electron window stays a pure HTML/CSS control panel, which never crashes.
+```
+Any app playing audio (browser, VLC, Zoom, etc.)
+         │
+         ▼  route via pavucontrol → DubCapture sink
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 1 · Capture                                              │
+│  parec reads raw PCM from DubCapture.monitor at 16 kHz         │
+└──────────┬──────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 2 · VAD (Voice Activity Detection)                       │
+│  Silero VAD splits stream at natural pauses                     │
+│  Emits complete phrase chunks (250ms silence = phrase end)      │
+└──────────┬──────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 3 · Speech-to-Text                                       │
+│  Groq Whisper large-v3-turbo                                    │
+│  Auto-detects source language → returns timestamped transcript  │
+└──────────┬──────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 4 · Translation                                          │
+│  Groq llama-3.1-8b-instant                                     │
+│  Source language → target language (casual spoken style)       │
+│  Stale phrases (> 6s old) are dropped to stay in sync          │
+└──────────┬──────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT 5 · TTS + Playback                                       │
+│  edge-tts generates MP3 → ffmpeg converts to PCM               │
+│  pacat pipes PCM to your speakers                               │
+│  Lag floor: ~3–5s (unavoidable — must hear phrase before dubbing)│
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Key design decisions
+## Two modes at a glance
 
-- **Sequential dub queue (no mid-sentence cutoff).** Dub clips play one at a time, each to completion. If a clip falls more than ~4s behind the video, it's dropped whole rather than cut mid-word. (`main.js` → `pumpDubQueue`)
-- **Buffer-then-play sync.** mpv starts paused. Once ~6s of dub is generated, it's released. If the playhead catches up to where Python has dubbed, mpv pauses and rebuilds buffer, then resumes. (`renderer/app.js` → `checkBuffer`)
-- **Fit-to-window time-stretch.** Hinglish is often longer than the English it replaces. Clips that overrun their slot are sped up via `ffmpeg atempo`, capped at **1.4×** so they never sound like a chipmunk; shorter clips are left untouched.
-- **Disk cache.** Every segment is saved as `seg_NNNNN.mp3` + a `.json` sidecar (text, timing, emotion). Re-running the same video skips translation/TTS entirely and starts almost instantly.
-- **Rate-limit resilience.** Groq batches retry up to 6× on `429`; if all retries fail, the segment dubs the original text so audio never silently disappears.
-- **Casual Hinglish.** The translation prompt is tuned for an energetic creator voice (`तो भाई`, `यार`, `बॉस`, keep technical terms in English), with a slang dictionary post-pass and code/URL stripping so the TTS never reads out `www.…` or raw bash.
+| | **Video URL** | **Live Dub** |
+|---|---|---|
+| **Works on** | Linux, macOS, Windows | Linux only |
+| **Source** | YouTube captions (any language) | Live mic / system audio |
+| **Lag** | ~15s first run, instant on re-run | Always ~3–5s |
+| **Cache** | ✅ Saves MP3 + JSON per segment | ❌ Real-time only |
+| **Best for** | YouTube courses, tutorials | Streams, calls, any video |
+
+---
+
+## Source & Target Languages
+
+- **Source:** Any language — the app auto-detects via the video's declared language
+  and fetches its native captions. Pass `--source-lang <code>` (e.g. `ar`, `zh`, `en`) to force one.
+- **Target:** 20 languages. **Hindi** gets the full casual-creator Hinglish prompt.
+  All other 19 get an energetic, conversational prompt in their own language.
+
+---
+
+## Why mpv instead of a built-in video player
+
+Electron's `<video>` element and Web Audio API crash with a **SIGSEGV** on Linux
+machines with Optimus (Intel + NVIDIA) graphics — the GPU driver kills Chromium's
+software renderer the moment it tries to decode video or create an `AudioContext`.
+
+The fix: hand all media off to **mpv** (a native video player) and control it via
+its JSON IPC socket. The Electron window becomes a pure HTML/CSS control panel
+that never touches the GPU — it just shows subtitles, sliders, and status.
 
 ---
 
@@ -303,12 +363,15 @@ yt-hindi-dubber/
 
 | Symptom | Likely cause / fix |
 |---|---|
-| No dub audio at all | Groq key not exported in the launch shell; or first batch still clearing the rate limit (wait ~20–30s). |
-| Dub plays but is silent past a point | Python hasn't generated that region yet — don't seek ahead on the first pass. |
-| Renderer window goes black | Old `<video>`/WebAudio path — current build uses mpv and shouldn't hit this. |
-| mpv window doesn't open | `mpv` not installed or not on PATH (`sudo apt install mpv`). |
-| Dub reads out URLs/code | Should be stripped by `clean_text()`; clear the cache (`rm -rf ~/.config/yt-dubber/dubout/audio`) and re-run. |
-| Want fresh translations | Delete the cache dir above to force regeneration. |
+| No dub audio at all | Groq key not exported in the launch shell; wait ~20–30s for first batch to clear the rate limit. |
+| Female voice sounds like first run is slow | It is — female cache is separate from male. First female run generates everything fresh; re-runs are instant. |
+| Dub plays but goes silent after a while | Video ran ahead of generation. Don't seek ahead on first pass; let the buffer-sync handle pacing. |
+| Live Dub plays nothing | Make sure you routed your app's audio to **DubCapture** in pavucontrol first. |
+| Live Dub crashes immediately on macOS/Windows | Live Dub is Linux-only (PulseAudio). Use Video URL mode on other OS. |
+| mpv window doesn't open | `mpv` not installed — `sudo apt install mpv`. |
+| Dub reads out URLs or bash commands | Cleared by `clean_text()`; if it persists, delete the cache and re-run. |
+| Want fresh translations for a video | `rm -rf ~/.config/yt-dubber/dubout/audio/<videoId>_<lang>_<gender>/` |
+| Want to force a specific source language | Add `--source-lang ar` (or `zh`, `en`, etc.) to the Python CLI or wait for UI support. |
 
 Cache location: `~/.config/yt-dubber/dubout/audio/`.
 
