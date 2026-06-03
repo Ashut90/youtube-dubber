@@ -22,135 +22,54 @@ A second **Live Dub** mode dubs *any* system audio in real time (browser, media 
 
 ## What it looks like
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  🎙 YT Dubber                                 ▶ Playing   │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │ [ Video URL ]   Live Dub                            │  │
-│  │                                                     │  │
-│  │  https://youtube.com/watch?v=...        [ ▶ Dub It ]│  │
-│  │  Language: Hindi ▾     Voice: ( Male ) Female        │  │
-│  │  ████████░░░░░  Translating batch 12/242…           │  │
-│  │                                                     │  │
-│  │  ▶ Video playing in mpv window — keep it open  22:25│  │
-│  │                                                     │  │
-│  │  subject matter of the course, the audience…        │  │
-│  │  ┌────────────────────────────────────────────────┐ │  │
-│  │  │ अब बॉस, regular expressions की बारी है! ये       │ │  │
-│  │  │ powerful text matching और substitution देते हैं! │ │  │
-│  │  └────────────────────────────────────────────────┘ │  │
-│  │  🔇 Original ──●────   🔊 Dubbed ──────────●        │  │
-│  └────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
-```
+The app has two panels — the **Electron control window** and a **separate mpv video window**.
 
-The **video renders in a separate mpv window** (more on why below). The Electron window is the control panel: it shows progress, original + dubbed subtitles, and volume sliders, and it plays the dubbed audio in sync with mpv's playhead.
+**Electron window** (controls, subtitles, sliders):
+
+| Element | Description |
+|---|---|
+| URL bar + Dub It | Paste any YouTube link, pick language and voice, click to start |
+| Progress bar | Shows current step: *Fetching captions → Translating → Generating TTS* |
+| mpv banner | Confirms video is playing in the mpv window, shows live timestamp |
+| Original subtitle | The source text for the current segment (grey) |
+| Dubbed subtitle | The translated Hinglish/target-language text (highlighted) |
+| Original / Dubbed sliders | Control mpv video volume and dubbed audio volume independently |
+
+**mpv window** — the video plays here at full quality. It starts paused until the first few seconds of dubbed audio are ready, then plays automatically in sync.
 
 ---
 
 ## How It Works
 
-### Mode 1 — Video URL (YouTube dubbing)
+### Mode 1 — Video URL
 
-```
-USER pastes YouTube URL + picks Language + Voice → clicks Dub It
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 1 · Video Stream                                          │
-│  yt-dlp fetches direct CDN URL → mpv opens video window        │
-│  mpv starts PAUSED (waits for dubbed audio buffer)             │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ meanwhile, in parallel...
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 2 · Captions                                              │
-│  yt-dlp downloads the video's native caption track (VTT)       │
-│  Auto-detects language → Arabic, Hindi, Chinese, English, etc. │
-│  Parses + merges caption blocks into clean ~5s segments        │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 3 · Translation  (batches of 20 segments)                 │
-│  Groq llama-3.1-8b-instant                                     │
-│  Any language → casual spoken Hinglish / target language       │
-│  Prompt tuned: "तो भाई", "यार", "बॉस" hooks, keep tech terms  │
-│  Post-processed: slang dict, URL strip, code → screen prompt   │
-│  Retry up to 6× on rate-limit; English fallback if all fail    │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 4 · Text-to-Speech                                        │
-│  edge-tts  (Microsoft Neural, free, internet required)         │
-│  Male → hi-IN-MadhurNeural  |  Female → hi-IN-SwaraNeural     │
-│  rate +12%, pitch +1Hz for energetic creator feel              │
-│  ffmpeg atempo: fit clip to time window, capped at 1.4×        │
-│  Saved to disk: seg_NNNNN.mp3 + seg_NNNNN.json (cached)       │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ segment ready → emit to Electron
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 5 · Playback Sync                                         │
-│  Once 6s of audio is buffered → mpv UNPAUSES                   │
-│  Each dub clip plays ONE AT A TIME (no mid-sentence cutoff)    │
-│  mpv IPC provides live time-pos → subtitles update in app      │
-│  If video catches up to generation frontier → mpv auto-pauses  │
-│  Clips > 4s behind video are dropped cleanly, not cut          │
-└─────────────────────────────────────────────────────────────────┘
-         │                          │
-         ▼                          ▼
-  mpv window                 Electron window
-  (video plays)         (subtitles + volume controls)
-```
+Paste a URL → pick language + voice → click **Dub It**. Five things happen in sequence:
 
-> **Second run on the same video?** Steps 3 + 4 are skipped entirely — cached
-> `.mp3` files load instantly and playback starts in seconds.
+| Step | What happens | Tool |
+|---|---|---|
+| **1 · Stream** | Video URL resolved, mpv opens and starts paused | `yt-dlp` + `mpv` |
+| **2 · Captions** | Native caption track downloaded, auto-detected language, parsed into ~5s segments | `yt-dlp` (VTT) |
+| **3 · Translation** | Segments translated in batches of 20, casual Hinglish style, retries on rate-limit | `Groq llama-3.1-8b` |
+| **4 · TTS** | Each translated segment synthesised to MP3, time-stretched to fit window (≤1.4×), saved to disk cache | `edge-tts` + `ffmpeg` |
+| **5 · Sync** | Once 6s of audio is buffered, mpv unpauses. Each clip plays to completion. If video outruns generation, mpv auto-pauses to rebuild buffer | `mpv IPC` |
+
+> **Second run on the same video?** Steps 3 + 4 are skipped — cached `.mp3` files load instantly.
 
 ---
 
-### Mode 2 — Live Dub (any system audio, Linux only)
+### Mode 2 — Live Dub (Linux only)
 
-```
-Any app playing audio (browser, VLC, Zoom, etc.)
-         │
-         ▼  route via pavucontrol → DubCapture sink
-┌─────────────────────────────────────────────────────────────────┐
-│  AGENT 1 · Capture                                              │
-│  parec reads raw PCM from DubCapture.monitor at 16 kHz         │
-└──────────┬──────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  AGENT 2 · VAD (Voice Activity Detection)                       │
-│  Silero VAD splits stream at natural pauses                     │
-│  Emits complete phrase chunks (250ms silence = phrase end)      │
-└──────────┬──────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  AGENT 3 · Speech-to-Text                                       │
-│  Groq Whisper large-v3-turbo                                    │
-│  Auto-detects source language → returns timestamped transcript  │
-└──────────┬──────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  AGENT 4 · Translation                                          │
-│  Groq llama-3.1-8b-instant                                     │
-│  Source language → target language (casual spoken style)       │
-│  Stale phrases (> 6s old) are dropped to stay in sync          │
-└──────────┬──────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  AGENT 5 · TTS + Playback                                       │
-│  edge-tts generates MP3 → ffmpeg converts to PCM               │
-│  pacat pipes PCM to your speakers                               │
-│  Lag floor: ~3–5s (unavoidable — must hear phrase before dubbing)│
-└─────────────────────────────────────────────────────────────────┘
-```
+Route any app's audio to the **DubCapture** virtual sink, then start Live Dub. Five agents run in parallel:
+
+| Agent | What it does | Tool |
+|---|---|---|
+| **1 · Capture** | Reads raw PCM from `DubCapture.monitor` at 16 kHz | `parec` |
+| **2 · VAD** | Splits the stream at natural speech pauses (~250ms silence) | `Silero VAD` |
+| **3 · STT** | Transcribes each phrase, auto-detects the source language | `Groq Whisper` |
+| **4 · Translate** | Translates to target language in casual spoken style, drops phrases older than 6s | `Groq llama-3.1-8b` |
+| **5 · TTS + Play** | Synthesises to MP3, converts to PCM, pipes to your speakers | `edge-tts` + `pacat` |
+
+> Inherent lag is ~3–5s — the system must hear a complete phrase before it can translate and speak it.
 
 ---
 
@@ -208,9 +127,9 @@ that never touches the GPU — it just shows subtitles, sliders, and status.
 
 ```bash
 # 1. Click "Fork" on GitHub first, then:
-git clone https://github.com/<YOUR_USERNAME>/yt-hindi-dubber.git
-cd yt-hindi-dubber
-git remote add upstream https://github.com/ahsutosh/yt-hindi-dubber.git
+git clone https://github.com/<YOUR_USERNAME>/youtube-dubber.git
+cd youtube-dubber
+git remote add upstream https://github.com/Ashut90/youtube-dubber.git
 ```
 
 > Cloning the original repo directly means you can't contribute back. Fork first.
