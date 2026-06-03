@@ -10,6 +10,8 @@
 > keep your modifications open source. Forking for private/commercial use without
 > releasing your source code is not permitted. See [LICENSE](LICENSE).
 
+![YT Dubber Pipeline](assets/pipeline.svg)
+
 Desktop app that **dubs YouTube videos into Hindi (and 19 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
 
 Paste a YouTube URL, and the app plays the video while generating and playing a synced dub on top. It pulls the video's captions, translates them to natural spoken Hinglish, synthesizes neural speech, and plays everything in sync — with a live transcript and on-screen subtitles.
