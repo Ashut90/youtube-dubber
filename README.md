@@ -173,18 +173,69 @@ The 5-agent pipeline (capture → Groq Whisper STT → Groq translate → edge-t
 
 ---
 
+## Use as a Python library
+
+The dubbing engine ships as an installable package — use it in your own code,
+scripts, or server with no GUI.
+
+```bash
+pip install youtube-dubber      # plus: yt-dlp + ffmpeg on PATH, and a Groq key
+export GROQ_API_KEY=gsk_xxxx
+```
+
+```python
+from youtube_dubber import dub
+
+# One call → dubbed MP3 clips + a manifest.json in ./out
+manifest = dub(
+    "https://www.youtube.com/watch?v=VIDEO_ID",
+    lang="hindi",      # any of the 20 supported languages
+    gender="female",   # "male" or "female"
+    out="./out",
+)
+print(len(manifest["segments"]), "segments dubbed")
+```
+
+Want live progress? Pass an `on_event` callback:
+
+```python
+from youtube_dubber import Dubber
+
+def on_event(ev):
+    if ev["type"] == "progress":
+        print(ev["step"], ev["pct"], ev["msg"])
+    elif ev["type"] == "segment":
+        print("dubbed:", ev["dubbed"])
+
+Dubber(lang="hindi", gender="male", out_dir="./out", on_event=on_event).run(url)
+```
+
+Or from the command line:
+
+```bash
+youtube-dubber --url https://youtu.be/VIDEO_ID --lang hindi --gender female --out ./out
+```
+
+> Output: `out/audio/<videoId>_<lang>_<gender>/seg_NNNNN.mp3` clips + `out/manifest.json`.
+> The Electron desktop app is just one consumer of this same engine.
+
+---
+
 ## Supported languages
 
 Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu, Spanish, French, German, Japanese, Chinese, Korean, Arabic, Portuguese, Russian, Italian.
 
-Each has a configured male/female edge-tts neural voice. Indian languages use a **Hinglish/code-switch** style (technical terms stay English); others translate fully. See `backend/languages.py`.
+Each has a configured male/female edge-tts neural voice. Indian languages use a **Hinglish/code-switch** style (technical terms stay English); others translate fully. See `backend/youtube_dubber/languages.py`.
 
 ---
 
 ## Project layout
 
 ```
-yt-hindi-dubber/
+youtube-dubber/
+├── pyproject.toml             pip package config (youtube-dubber)
+├── setup.sh / setup.bat       one-command dependency installers
+│
 ├── frontend/                  Electron desktop app
 │   ├── main.js                main process: mpv control, dub queue, spawns Python
 │   ├── preload.js             contextBridge IPC API
@@ -195,11 +246,16 @@ yt-hindi-dubber/
 │       └── styles.css
 │
 └── backend/
-    ├── dub_video.py           ★ Video URL mode: yt-dlp → translate → TTS → cache
-    ├── live_dub_v6.py         ★ Live mode: 5-agent real-time pipeline
+    ├── youtube_dubber/        ★ the installable dubbing-engine package
+    │   ├── __init__.py        public API: Dubber, dub, LANGUAGES
+    │   ├── core.py            the engine (captions → translate → TTS → cache)
+    │   ├── cli.py             `youtube-dubber` command + `python -m youtube_dubber`
+    │   └── languages.py       20-language registry (voices, script, style)
+    ├── dub_video.py           thin Electron adapter → calls the package
+    ├── live_dub_v6.py         Live mode: 5-agent real-time pipeline
     ├── natural_tts.py         edge-tts wrapper used by Live Dub
     ├── vad.py                 Silero voice-activity detection (Live Dub)
-    ├── languages.py           20-language registry (voices, script, style)
+    ├── languages.py           compatibility shim → youtube_dubber.languages
     └── requirements.txt
 ```
 
@@ -207,7 +263,7 @@ yt-hindi-dubber/
 
 ## Configuration
 
-**Translation / TTS** — `backend/dub_video.py`:
+**Translation / TTS** — `backend/youtube_dubber/core.py`:
 
 | Knob | Where | Effect |
 |---|---|---|

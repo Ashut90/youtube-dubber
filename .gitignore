@@ -11,6 +11,12 @@ backend/__pycache__/
 *.pyo
 .venv/
 
+# Python build artifacts
+dist/
+build/
+*.egg-info/
+backend/**/*.egg-info/
+
 # Secrets — never commit your API key
 .env
 .env.*

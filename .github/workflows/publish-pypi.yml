@@ -1,0 +1,38 @@
+name: Publish to PyPI
+
+# Publishes the youtube-dubber library to PyPI when you push a version tag.
+# Requires a PyPI API token stored as the repo secret PYPI_API_TOKEN.
+#   PyPI → Account settings → API tokens → create token → copy
+#   GitHub → repo Settings → Secrets and variables → Actions → New secret
+#     Name: PYPI_API_TOKEN   Value: pypi-...
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-publish:
+    name: Build & publish wheel/sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Check the artifacts
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload dist/*

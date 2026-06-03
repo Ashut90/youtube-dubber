@@ -21,11 +21,24 @@ jobs:
 
       - name: Syntax-check all backend files
         run: |
-          for f in backend/*.py; do
+          for f in backend/*.py backend/youtube_dubber/*.py; do
             echo "Checking $f"
             python -m py_compile "$f"
           done
           echo "All backend files compile cleanly."
+
+      - name: Build the youtube-dubber package
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          twine check dist/*
+          echo "Package builds and passes metadata checks."
+
+      - name: Import the built package in a clean venv
+        run: |
+          python -m venv /tmp/v
+          /tmp/v/bin/pip install dist/*.whl
+          /tmp/v/bin/python -c "from youtube_dubber import Dubber, dub, LANGUAGES, __version__; print('import OK', __version__, len(LANGUAGES), 'languages')"
 
   frontend:
     name: Electron frontend checks
