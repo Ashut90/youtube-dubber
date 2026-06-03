@@ -22,54 +22,15 @@ A second **Live Dub** mode dubs *any* system audio in real time (browser, media 
 
 ## What it looks like
 
-The app has two panels — the **Electron control window** and a **separate mpv video window**.
+![App UI Preview](assets/ui-preview.svg)
 
-**Electron window** (controls, subtitles, sliders):
-
-| Element | Description |
-|---|---|
-| URL bar + Dub It | Paste any YouTube link, pick language and voice, click to start |
-| Progress bar | Shows current step: *Fetching captions → Translating → Generating TTS* |
-| mpv banner | Confirms video is playing in the mpv window, shows live timestamp |
-| Original subtitle | The source text for the current segment (grey) |
-| Dubbed subtitle | The translated Hinglish/target-language text (highlighted) |
-| Original / Dubbed sliders | Control mpv video volume and dubbed audio volume independently |
-
-**mpv window** — the video plays here at full quality. It starts paused until the first few seconds of dubbed audio are ready, then plays automatically in sync.
+The **video plays in a separate mpv window** (full quality). The Electron window is the control panel — subtitles, progress, and volume sliders. Both stay in sync via mpv's IPC socket.
 
 ---
 
 ## How It Works
 
-### Mode 1 — Video URL
-
-Paste a URL → pick language + voice → click **Dub It**. Five things happen in sequence:
-
-| Step | What happens | Tool |
-|---|---|---|
-| **1 · Stream** | Video URL resolved, mpv opens and starts paused | `yt-dlp` + `mpv` |
-| **2 · Captions** | Native caption track downloaded, auto-detected language, parsed into ~5s segments | `yt-dlp` (VTT) |
-| **3 · Translation** | Segments translated in batches of 20, casual Hinglish style, retries on rate-limit | `Groq llama-3.1-8b` |
-| **4 · TTS** | Each translated segment synthesised to MP3, time-stretched to fit window (≤1.4×), saved to disk cache | `edge-tts` + `ffmpeg` |
-| **5 · Sync** | Once 6s of audio is buffered, mpv unpauses. Each clip plays to completion. If video outruns generation, mpv auto-pauses to rebuild buffer | `mpv IPC` |
-
-> **Second run on the same video?** Steps 3 + 4 are skipped — cached `.mp3` files load instantly.
-
----
-
-### Mode 2 — Live Dub (Linux only)
-
-Route any app's audio to the **DubCapture** virtual sink, then start Live Dub. Five agents run in parallel:
-
-| Agent | What it does | Tool |
-|---|---|---|
-| **1 · Capture** | Reads raw PCM from `DubCapture.monitor` at 16 kHz | `parec` |
-| **2 · VAD** | Splits the stream at natural speech pauses (~250ms silence) | `Silero VAD` |
-| **3 · STT** | Transcribes each phrase, auto-detects the source language | `Groq Whisper` |
-| **4 · Translate** | Translates to target language in casual spoken style, drops phrases older than 6s | `Groq llama-3.1-8b` |
-| **5 · TTS + Play** | Synthesises to MP3, converts to PCM, pipes to your speakers | `edge-tts` + `pacat` |
-
-> Inherent lag is ~3–5s — the system must hear a complete phrase before it can translate and speak it.
+![How It Works](assets/how-it-works.svg)
 
 ---
 

@@ -1,0 +1,133 @@
+<svg width="720" height="480" viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .fade { animation: fade .7s ease both; }
+      .fade2 { animation: fade .7s ease .2s both; }
+      .fade3 { animation: fade .7s ease .4s both; }
+      .fade4 { animation: fade .7s ease .6s both; }
+      .fade5 { animation: fade .7s ease .8s both; }
+      @keyframes fade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+      .blink { animation: blink 1.2s ease-in-out infinite; }
+      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+      .progress-bar { animation: progress 4s ease 1s both; }
+      @keyframes progress { from{width:0} to{width:220px} }
+
+      .subtitle-in { animation: subtitleIn .5s ease 1.8s both; }
+      @keyframes subtitleIn { from{opacity:0;transform:scale(.97)} to{opacity:1;transform:scale(1)} }
+    </style>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-purple">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#7c6af7" flood-opacity="0.6"/>
+    </filter>
+    <linearGradient id="grad-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1e3a"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="grad-btn" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c6af7"/>
+      <stop offset="100%" stop-color="#9b8dff"/>
+    </linearGradient>
+    <linearGradient id="grad-sub" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a1a3a"/>
+      <stop offset="100%" stop-color="#1e1a3e"/>
+    </linearGradient>
+    <clipPath id="app-clip">
+      <rect width="720" height="480" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <!-- App window -->
+  <g clip-path="url(#app-clip)" filter="url(#shadow)">
+
+    <!-- Background -->
+    <rect width="720" height="480" fill="#0f0f1a"/>
+
+    <!-- Title bar -->
+    <rect width="720" height="44" fill="url(#grad-top)"/>
+    <circle cx="24" cy="22" r="6" fill="#f87171"/>
+    <circle cx="44" cy="22" r="6" fill="#fbbf24"/>
+    <circle cx="64" cy="22" r="6" fill="#4ade80"/>
+    <text x="360" y="27" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="13" font-weight="600">YT Dubber</text>
+
+    <!-- Playing badge -->
+    <rect x="590" y="12" width="116" height="22" rx="11" fill="#7c6af7" opacity=".25" class="fade"/>
+    <circle cx="606" cy="23" r="4" fill="#9b8dff" class="blink"/>
+    <text x="618" y="27" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="600" class="fade">▶ Playing in mpv</text>
+
+    <!-- Header line -->
+    <rect y="44" width="720" height="1" fill="#2e2e50"/>
+
+    <!-- Logo row -->
+    <text x="28" y="74" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="16" font-weight="700" class="fade">🎙  YT Dubber</text>
+
+    <!-- Tab bar -->
+    <rect y="88" width="720" height="1" fill="#2e2e50"/>
+    <rect x="28" y="52" width="106" height="36" rx="0" fill="none"/>
+    <text x="54" y="72" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="600" class="fade">📹 Video URL</text>
+    <rect x="28" y="86" width="106" height="3" rx="1" fill="#7c6af7" class="fade"/>
+    <text x="180" y="72" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="12" class="fade">🎤 Live Dub</text>
+
+    <!-- Main card -->
+    <rect x="20" y="100" width="680" height="192" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1" class="fade2"/>
+
+    <!-- URL row -->
+    <rect x="36" y="118" width="548" height="36" rx="7" fill="#222240" stroke="#2e2e50" stroke-width="1" class="fade2"/>
+    <text x="52" y="140" fill="#7070a0" font-family="'Segoe UI',monospace" font-size="12" class="fade2">https://www.youtube.com/watch?v=fAgz66M4aNc</text>
+
+    <!-- Dub It button -->
+    <rect x="596" y="118" width="88" height="36" rx="7" fill="url(#grad-btn)" filter="url(#glow-purple)" class="fade2"/>
+    <text x="640" y="140" text-anchor="middle" fill="white" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700" class="fade2">▶  Dub It</text>
+
+    <!-- Controls row -->
+    <text x="36" y="176" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600" letter-spacing="1" class="fade2">LANGUAGE</text>
+    <rect x="36" y="182" width="200" height="28" rx="6" fill="#222240" stroke="#2e2e50" stroke-width="1" class="fade2"/>
+    <text x="52" y="200" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" class="fade2">Hindi</text>
+    <text x="224" y="200" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10" class="fade2">▾</text>
+
+    <text x="270" y="176" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9" font-weight="600" letter-spacing="1" class="fade2">VOICE</text>
+    <rect x="270" y="182" width="80" height="28" rx="6" fill="#7c6af7" class="fade2"/>
+    <text x="310" y="200" text-anchor="middle" fill="white" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="600" class="fade2">Male</text>
+    <rect x="358" y="182" width="80" height="28" rx="6" fill="#222240" stroke="#2e2e50" stroke-width="1" class="fade2"/>
+    <text x="398" y="200" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="12" class="fade2">Female</text>
+
+    <!-- Progress bar -->
+    <text x="36" y="226" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10" class="fade3">Translating: Batch 12/242 — segments 221–240</text>
+    <rect x="36" y="234" width="648" height="5" rx="2" fill="#222240" class="fade3"/>
+    <rect x="36" y="234" width="220" height="5" rx="2" fill="#7c6af7" class="progress-bar"/>
+
+    <!-- mpv banner -->
+    <rect x="20" y="304" width="680" height="36" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1" class="fade3"/>
+    <circle cx="42" cy="322" r="6" fill="#7c6af7" opacity=".3" class="blink"/>
+    <polygon points="38,318 38,326 46,322" fill="#9b8dff"/>
+    <text x="60" y="326" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" class="fade3">Video playing in <tspan font-weight="700">mpv</tspan> window — keep it open</text>
+    <text x="670" y="326" text-anchor="end" fill="#7070a0" font-family="'Segoe UI',monospace" font-size="12" class="fade3">22:25</text>
+
+    <!-- Subtitle section -->
+    <text x="360" y="366" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="12" class="fade4">subject matter of the course, the audience…</text>
+
+    <rect x="80" y="376" width="560" height="54" rx="10" fill="url(#grad-sub)" stroke="#7c6af7" stroke-width="1.5" class="subtitle-in"/>
+    <text x="360" y="398" text-anchor="middle" fill="#c4bbff" font-family="'Segoe UI',sans-serif" font-size="13" font-weight="600" class="subtitle-in">अब बॉस, regular expressions की बारी है!</text>
+    <text x="360" y="418" text-anchor="middle" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="12" class="subtitle-in">ये powerful text matching और substitution देते हैं!</text>
+
+    <!-- Volume sliders -->
+    <g class="fade5">
+      <text x="36" y="456" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="11">🔇  Original</text>
+      <rect x="120" y="447" width="140" height="4" rx="2" fill="#2e2e50"/>
+      <rect x="120" y="447" width="52" height="4" rx="2" fill="#7070a0"/>
+      <circle cx="172" cy="449" r="6" fill="#9b8dff"/>
+
+      <text x="310" y="456" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="11">🔊  Dubbed</text>
+      <rect x="390" y="447" width="140" height="4" rx="2" fill="#2e2e50"/>
+      <rect x="390" y="447" width="130" height="4" rx="2" fill="#7c6af7"/>
+      <circle cx="520" cy="449" r="6" fill="#9b8dff"/>
+    </g>
+
+  </g>
+
+  <!-- Window border -->
+  <rect width="720" height="480" rx="14" fill="none" stroke="#2e2e50" stroke-width="1.5"/>
+</svg>

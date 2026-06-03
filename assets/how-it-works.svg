@@ -1,0 +1,219 @@
+<svg width="720" height="660" viewBox="0 0 720 660" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .s1{animation:up .5s ease .0s both}
+      .s2{animation:up .5s ease .15s both}
+      .s3{animation:up .5s ease .30s both}
+      .s4{animation:up .5s ease .45s both}
+      .s5{animation:up .5s ease .60s both}
+      .s6{animation:up .5s ease .75s both}
+      .s7{animation:up .5s ease .90s both}
+      @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+      .flow{stroke-dasharray:6 4;animation:flow 1.6s linear infinite}
+      @keyframes flow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+    </style>
+    <filter id="card-shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity=".4"/>
+    </filter>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c6af7"/>
+      <stop offset="100%" stop-color="#9b8dff"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#fcd34d"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </linearGradient>
+    <linearGradient id="g4" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="100%" stop-color="#fca5a5"/>
+    </linearGradient>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7Z" fill="#7c6af7"/>
+    </marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7Z" fill="#4ade80"/>
+    </marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7Z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="660" rx="14" fill="#0f0f1a"/>
+
+  <!-- ═══ SECTION HEADER: Video URL Mode ═══ -->
+  <g class="s1">
+    <rect x="20" y="18" width="680" height="34" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20" y="18" width="4" height="34" rx="2" fill="url(#g1)"/>
+    <text x="44" y="40" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="13" font-weight="700">MODE 1 — Video URL</text>
+    <text x="400" y="40" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="11">YouTube · Any language source · 20 language targets · Disk cache</text>
+  </g>
+
+  <!-- Step cards: horizontal row -->
+  <!-- Card helper: x, y, accent-gradient-id, icon, title, sub1, sub2 -->
+
+  <!-- Step 1 -->
+  <g class="s2" filter="url(#card-shadow)">
+    <rect x="20"  y="66" width="124" height="96" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20"  y="66" width="124" height="3"  rx="1"  fill="url(#g1)"/>
+    <text x="82"  y="88" text-anchor="middle" font-size="20">📋</text>
+    <text x="82"  y="107" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700">Paste URL</text>
+    <text x="82"  y="121" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">Any YouTube link</text>
+    <text x="82"  y="133" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">pick lang + voice</text>
+    <rect x="28"  y="148" width="108" height="7" rx="3" fill="#222240"/>
+    <text x="36"  y="156" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="7">STEP 1</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="146" y1="114" x2="162" y2="114" stroke="#7c6af7" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Step 2 -->
+  <g class="s2" filter="url(#card-shadow)">
+    <rect x="164" y="66" width="124" height="96" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="164" y="66" width="124" height="3"  rx="1"  fill="url(#g1)"/>
+    <text x="226" y="88" text-anchor="middle" font-size="20">📺</text>
+    <text x="226" y="107" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700">Video Stream</text>
+    <text x="226" y="121" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">yt-dlp → CDN URL</text>
+    <text x="226" y="133" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">mpv opens · paused</text>
+    <rect x="172" y="148" width="108" height="7" rx="3" fill="#222240"/>
+    <text x="180" y="156" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="7">STEP 2</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="290" y1="114" x2="306" y2="114" stroke="#7c6af7" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Step 3 -->
+  <g class="s3" filter="url(#card-shadow)">
+    <rect x="308" y="66" width="124" height="96" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="308" y="66" width="124" height="3"  rx="1"  fill="url(#g2)"/>
+    <text x="370" y="88" text-anchor="middle" font-size="20">📝</text>
+    <text x="370" y="107" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700">Captions</text>
+    <text x="370" y="121" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">yt-dlp VTT download</text>
+    <text x="370" y="133" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">auto-detect language</text>
+    <rect x="316" y="148" width="108" height="7" rx="3" fill="#222240"/>
+    <text x="324" y="156" fill="#fbbf24" font-family="'Segoe UI',sans-serif" font-size="7">STEP 3</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="434" y1="114" x2="450" y2="114" stroke="#7c6af7" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Step 4 -->
+  <g class="s3" filter="url(#card-shadow)">
+    <rect x="452" y="66" width="124" height="96" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="452" y="66" width="124" height="3"  rx="1"  fill="url(#g1)"/>
+    <text x="514" y="88" text-anchor="middle" font-size="20">🌐</text>
+    <text x="514" y="107" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700">Translation</text>
+    <text x="514" y="121" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">Groq llama-3.1-8b</text>
+    <text x="514" y="133" text-anchor="middle" fill="#9b8dff"  font-family="'Segoe UI',sans-serif" font-size="9">→ casual Hinglish</text>
+    <rect x="460" y="148" width="108" height="7" rx="3" fill="#222240"/>
+    <text x="468" y="156" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="7">STEP 4 · retry 6×</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="578" y1="114" x2="594" y2="114" stroke="#7c6af7" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Step 5 -->
+  <g class="s4" filter="url(#card-shadow)">
+    <rect x="596" y="66" width="104" height="96" rx="10" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="596" y="66" width="104" height="3"  rx="1"  fill="url(#g3)"/>
+    <text x="648" y="88" text-anchor="middle" font-size="20">🔊</text>
+    <text x="648" y="107" text-anchor="middle" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="11" font-weight="700">TTS Audio</text>
+    <text x="648" y="121" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">edge-tts neural</text>
+    <text x="648" y="133" text-anchor="middle" fill="#4ade80" font-family="'Segoe UI',sans-serif" font-size="9">cached to disk</text>
+    <rect x="604" y="148" width="88"  height="7" rx="3" fill="#222240"/>
+    <text x="612" y="156" fill="#4ade80" font-family="'Segoe UI',sans-serif" font-size="7">STEP 5 · ≤1.4× stretch</text>
+  </g>
+
+  <!-- Down arrow from Step 5 -->
+  <line x1="648" y1="164" x2="648" y2="184" stroke="#4ade80" stroke-width="1.5" marker-end="url(#arr-g)" class="flow"/>
+
+  <!-- Sync box -->
+  <g class="s4" filter="url(#card-shadow)">
+    <rect x="20" y="186" width="680" height="52" rx="10" fill="#1a1a2e" stroke="#4ade80" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="30" y="207" fill="#4ade80" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700">⚡  STEP 6 · Playback Sync</text>
+    <text x="30" y="224" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">Buffer 6s → mpv unpauses · one clip at a time (no cutoffs) · auto-pause if video outruns generation · cached = instant re-run</text>
+  </g>
+
+  <!-- Output row -->
+  <g class="s5">
+    <rect x="20"  y="252" width="324" height="44" rx="8" fill="#1a1a2e" stroke="#7c6af7" stroke-width="1"/>
+    <text x="182" y="270" text-anchor="middle" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="13">🎬  mpv window</text>
+    <text x="182" y="287" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">video plays at full quality</text>
+
+    <rect x="376" y="252" width="324" height="44" rx="8" fill="#1a1a2e" stroke="#7c6af7" stroke-width="1"/>
+    <text x="538" y="270" text-anchor="middle" fill="#9b8dff" font-family="'Segoe UI',sans-serif" font-size="13">🖥  Electron window</text>
+    <text x="538" y="287" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">subtitles · sliders · progress · control panel</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="20" y1="320" x2="700" y2="320" stroke="#2e2e50" stroke-width="1" stroke-dasharray="4 4" class="s5"/>
+
+  <!-- ═══ SECTION HEADER: Live Dub ═══ -->
+  <g class="s5">
+    <rect x="20" y="332" width="680" height="34" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20" y="332" width="4"   height="34" rx="2" fill="url(#g4)"/>
+    <text x="44" y="354" fill="#fca5a5" font-family="'Segoe UI',sans-serif" font-size="13" font-weight="700">MODE 2 — Live Dub</text>
+    <text x="340" y="354" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="11">Linux · PulseAudio · any app audio · real-time · ~3–5s lag</text>
+  </g>
+
+  <!-- Live dub pipeline — vertical with icons -->
+  <!-- Agent 1: Capture -->
+  <g class="s5" filter="url(#card-shadow)">
+    <rect x="20"  y="380" width="680" height="44" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20"  y="380" width="4"   height="44" rx="2" fill="url(#g4)"/>
+    <circle cx="56" cy="402" r="14" fill="#f87171" opacity=".15"/>
+    <text x="56" y="408" text-anchor="middle" font-size="16">🎙</text>
+    <text x="86"  y="398" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700">AGENT 1 · Capture</text>
+    <text x="86"  y="414" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">parec reads raw PCM from DubCapture.monitor at 16 kHz → Silero VAD splits at natural pauses</text>
+  </g>
+
+  <line x1="360" y1="426" x2="360" y2="442" stroke="#7070a0" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Agent 2: Whisper -->
+  <g class="s6" filter="url(#card-shadow)">
+    <rect x="20"  y="444" width="680" height="44" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20"  y="444" width="4"   height="44" rx="2" fill="url(#g2)"/>
+    <circle cx="56" cy="466" r="14" fill="#fbbf24" opacity=".15"/>
+    <text x="56" y="472" text-anchor="middle" font-size="16">✍️</text>
+    <text x="86"  y="462" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700">AGENT 2 · Speech-to-Text</text>
+    <text x="86"  y="478" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">Groq Whisper large-v3-turbo · auto-detects source language · returns timestamped transcript</text>
+  </g>
+
+  <line x1="360" y1="490" x2="360" y2="506" stroke="#7070a0" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Agent 3: Translate -->
+  <g class="s6" filter="url(#card-shadow)">
+    <rect x="20"  y="508" width="680" height="44" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20"  y="508" width="4"   height="44" rx="2" fill="url(#g1)"/>
+    <circle cx="56" cy="530" r="14" fill="#7c6af7" opacity=".15"/>
+    <text x="56" y="536" text-anchor="middle" font-size="16">🌐</text>
+    <text x="86"  y="526" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700">AGENT 3 · Translation</text>
+    <text x="86"  y="542" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">Groq llama-3.1-8b · any language → casual target language · drops phrases older than 6s to stay in sync</text>
+  </g>
+
+  <line x1="360" y1="554" x2="360" y2="570" stroke="#7070a0" stroke-width="1.5" marker-end="url(#arr)" class="flow"/>
+
+  <!-- Agent 4: TTS + Play -->
+  <g class="s7" filter="url(#card-shadow)">
+    <rect x="20"  y="572" width="680" height="44" rx="8" fill="#1a1a2e" stroke="#2e2e50" stroke-width="1"/>
+    <rect x="20"  y="572" width="4"   height="44" rx="2" fill="url(#g3)"/>
+    <circle cx="56" cy="594" r="14" fill="#4ade80" opacity=".15"/>
+    <text x="56" y="600" text-anchor="middle" font-size="16">🔊</text>
+    <text x="86"  y="590" fill="#e2e2f0" font-family="'Segoe UI',sans-serif" font-size="12" font-weight="700">AGENT 4 · TTS + Playback</text>
+    <text x="86"  y="606" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="10">edge-tts → MP3 · ffmpeg → PCM · pacat → speakers · auto-detects sink · lag floor ~3–5s</text>
+  </g>
+
+  <!-- Footer bar -->
+  <rect x="20" y="630" width="680" height="20" rx="6" fill="#13131f" class="s7"/>
+  <text x="360" y="643" text-anchor="middle" fill="#7070a0" font-family="'Segoe UI',sans-serif" font-size="9">
+    GPL-3.0 · github.com/Ashut90/youtube-dubber · 20 languages · Male &amp; Female voices · Disk cache for instant re-runs
+  </text>
+
+  <!-- Border -->
+  <rect width="720" height="660" rx="14" fill="none" stroke="#2e2e50" stroke-width="1.5"/>
+</svg>
