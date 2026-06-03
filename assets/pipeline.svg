@@ -7,45 +7,30 @@
       .text-muted { fill: #7070a0; font-family: 'Segoe UI', sans-serif; }
       .text-hindi { fill: #9b8dff; font-family: 'Segoe UI', sans-serif; }
 
-      .pulse { animation: pulse 2s ease-in-out infinite; }
-      @keyframes pulse {
-        0%,100% { opacity:1; } 50% { opacity:0.3; }
-      }
-
-      .flow { stroke-dasharray:8 4; animation: flow 1.4s linear infinite; }
+      /* flowing arrows — shows data direction */
+      .flow { stroke-dasharray:8 4; animation: flow 1.6s linear infinite; }
       @keyframes flow {
         from { stroke-dashoffset:24; } to { stroke-dashoffset:0; }
       }
 
-      .s1 { animation: rise .5s ease  .0s both; }
+      /* one-time fade-in per card — clean entry, never repeats */
+      .s1 { animation: rise .5s ease  .0s  both; }
       .s2 { animation: rise .5s ease  .25s both; }
-      .s3 { animation: rise .5s ease  .5s both; }
+      .s3 { animation: rise .5s ease  .5s  both; }
       .s4 { animation: rise .5s ease  .75s both; }
-      .s5 { animation: rise .5s ease 1.0s both; }
+      .s5 { animation: rise .5s ease 1.0s  both; }
       @keyframes rise {
-        from { opacity:0; transform:translateY(12px); }
+        from { opacity:0; transform:translateY(10px); }
         to   { opacity:1; transform:translateY(0); }
       }
 
-      .spin { animation: spin 1.6s linear infinite; transform-origin:50% 50%; }
-      @keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-
-      .b1{animation:bar .85s ease-in-out 0.00s infinite alternate;}
-      .b2{animation:bar .85s ease-in-out 0.12s infinite alternate;}
-      .b3{animation:bar .85s ease-in-out 0.24s infinite alternate;}
-      .b4{animation:bar .85s ease-in-out 0.36s infinite alternate;}
-      .b5{animation:bar .85s ease-in-out 0.48s infinite alternate;}
-      .b6{animation:bar .85s ease-in-out 0.60s infinite alternate;}
-      @keyframes bar { from{transform:scaleY(.25);} to{transform:scaleY(1);} }
-
-      .glow { animation: glow 2s ease-in-out infinite; }
-      @keyframes glow {
-        0%,100% { filter:drop-shadow(0 0 3px #7c6af7); }
-        50%      { filter:drop-shadow(0 0 10px #7c6af7); }
-      }
-
+      /* typewriter on the Hindi text — shows translation happening */
       .tw { animation: tw 3s steps(20,end) 1.5s both; }
       @keyframes tw { from{clip-path:inset(0 100% 0 0);} to{clip-path:inset(0 0% 0 0);} }
+
+      /* everything else is static */
+      .pulse {} .spin {} .glow {}
+      .b1,.b2,.b3,.b4,.b5,.b6 {}
     </style>
     <marker id="a"  markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
       <path d="M1,1 L6,3.5 L1,6Z" fill="#7c6af7"/>
