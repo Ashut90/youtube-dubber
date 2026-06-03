@@ -1,0 +1,51 @@
+name: Build & Release
+
+# Triggers when you push a version tag like v1.0.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  build-linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build AppImage
+        working-directory: frontend
+        run: npm run build:linux
+
+      - name: Upload AppImage to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: frontend/dist/*.AppImage
+          body: |
+            ## YT Dubber ${{ github.ref_name }}
+
+            **Linux AppImage** — download below.
+
+            > ⚠️ The AppImage bundles the Electron app, but you still need these
+            > system tools installed (run `bash setup.sh`):
+            > **mpv · ffmpeg · yt-dlp · Python 3.10+ · a Groq API key**
+            >
+            > See the [README](https://github.com/Ashut90/youtube-dubber#setup) for setup.
+
+            Made with the casual-dubbing engine — 20 languages, Male & Female voices.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

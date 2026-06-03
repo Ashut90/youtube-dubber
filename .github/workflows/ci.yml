@@ -1,0 +1,53 @@
+name: CI
+
+# Runs on every push and pull request — gives the green check badge
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend:
+    name: Python backend checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Syntax-check all backend files
+        run: |
+          for f in backend/*.py; do
+            echo "Checking $f"
+            python -m py_compile "$f"
+          done
+          echo "All backend files compile cleanly."
+
+  frontend:
+    name: Electron frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Syntax-check JS files
+        working-directory: frontend
+        run: |
+          node --check main.js
+          node --check preload.js
+          node --check renderer/app.js
+          echo "All frontend JS files parse cleanly."

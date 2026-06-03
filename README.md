@@ -1,8 +1,10 @@
 # YT Dubber
 
+[![CI](https://github.com/Ashut90/youtube-dubber/actions/workflows/ci.yml/badge.svg)](https://github.com/Ashut90/youtube-dubber/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Discussions](https://img.shields.io/badge/💬-Discuss-blueviolet)](../../discussions)
+[![Download](https://img.shields.io/badge/⬇️-Download%20AppImage-orange.svg)](../../releases/latest)
 
 > **Want to try it or contribute? [Fork this repo](../../fork) — do not clone directly.**
 >
