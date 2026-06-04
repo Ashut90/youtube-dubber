@@ -46,6 +46,9 @@ import numpy as np
 _p = argparse.ArgumentParser()
 _p.add_argument("--lang",   default="hindi")
 _p.add_argument("--gender", default="male")
+_p.add_argument("--tts",    default=os.environ.get("YTDUB_TTS", "edge"),
+                choices=["edge", "kokoro"],
+                help="TTS backend. 'kokoro' = local GPU (opt-in), falls back to edge.")
 _args, _ = _p.parse_known_args()
 
 import languages
@@ -53,6 +56,15 @@ languages.configure(_args.lang, _args.gender)
 
 from groq import Groq
 from vad import PhraseDetector, FRAME_SIZE
+
+# Reuse the tested engine: Kokoro/edge synthesis, the educational-Hinglish
+# prompt, slang cleaner, and the strict clock anchor — all from the package.
+import asyncio
+from youtube_dubber.core import (
+    Dubber, fit_to_duration, polish_hinglish, clean_text,
+)
+_dubber = Dubber(lang=_args.lang, gender=_args.gender,
+                 out_dir=tempfile.gettempdir(), tts=_args.tts)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 CAPTURE_SOURCE   = "DubCapture.monitor"
@@ -97,14 +109,16 @@ STT_MODEL        = "whisper-large-v3-turbo"
 TRANSLATE_MODEL  = "llama-3.1-8b-instant"
 
 # ── Shared queues between agents ──────────────────────────────────────────────
-# (capture_time, pcm_float32)
-audio_q:   "queue.Queue[tuple[float, np.ndarray]]" = queue.Queue(maxsize=8)
-# (capture_time, english_text)
-text_q:    "queue.Queue[tuple[float, str]]"         = queue.Queue(maxsize=8)
-# (emotion, hinglish_text)
-tts_q:     "queue.Queue[tuple[str, str]]"           = queue.Queue(maxsize=8)
-# mp3 bytes
-play_q:    "queue.Queue[bytes]"                     = queue.Queue(maxsize=8)
+# The phrase DURATION (seconds the speaker actually took) is threaded through so
+# the TTS agent can clock-anchor the dub to that exact window.
+# (capture_time, phrase_dur_s, pcm_float32)
+audio_q:   "queue.Queue[tuple[float, float, np.ndarray]]" = queue.Queue(maxsize=8)
+# (capture_time, phrase_dur_s, source_text)
+text_q:    "queue.Queue[tuple[float, float, str]]"         = queue.Queue(maxsize=8)
+# (emotion, dubbed_text, phrase_dur_s)
+tts_q:     "queue.Queue[tuple[str, str, float]]"           = queue.Queue(maxsize=8)
+# mp3 bytes (already clock-anchored)
+play_q:    "queue.Queue[bytes]"                            = queue.Queue(maxsize=8)
 
 stop_flag  = threading.Event()
 groq_client: Groq | None = None
@@ -145,8 +159,9 @@ def agent_capture():
             frame = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
             phrase = detector.process_frame(frame)
             if phrase is not None:
+                phrase_dur = len(phrase) / CAPTURE_RATE   # the speaker's window
                 try:
-                    audio_q.put_nowait((time.monotonic(), phrase))
+                    audio_q.put_nowait((time.monotonic(), phrase_dur, phrase))
                 except queue.Full:
                     pass
     finally:
@@ -171,7 +186,7 @@ def agent_stt():
     client = get_groq()
     while not stop_flag.is_set():
         try:
-            ts, pcm = audio_q.get(timeout=0.5)
+            ts, dur, pcm = audio_q.get(timeout=0.5)
         except queue.Empty:
             continue
 
@@ -192,7 +207,7 @@ def agent_stt():
             if text:
                 print(f"[stt] {text}")
                 try:
-                    text_q.put_nowait((ts, text))
+                    text_q.put_nowait((ts, dur, text))
                 except queue.Full:
                     pass
         except Exception as e:
@@ -254,7 +269,7 @@ def agent_translate():
 
     while not stop_flag.is_set():
         try:
-            ts, text = text_q.get(timeout=0.5)
+            ts, dur, text = text_q.get(timeout=0.5)
         except queue.Empty:
             continue
 
@@ -264,7 +279,8 @@ def agent_translate():
             continue
 
         try:
-            messages = [{"role": "system", "content": _get_system_prompt()}]
+            # Reuse the package's educational-Hinglish + gender-aware prompt
+            messages = [{"role": "system", "content": _dubber.get_system_prompt()}]
             messages.extend(history[-4:])   # last 2 turns for context
             messages.append({"role": "user", "content": text})
 
@@ -298,7 +314,7 @@ def agent_translate():
                 history = history[-8:]
 
             try:
-                tts_q.put_nowait((emotion, dubbed))
+                tts_q.put_nowait((emotion, dubbed, dur))
             except queue.Full:
                 pass
 
@@ -309,17 +325,40 @@ def agent_translate():
                 print(f"[translate] error: {e}")
 
 
-# ── Agent 4: TTS (edge-tts) ───────────────────────────────────────────────────
-from natural_tts import to_speech_mp3
-
+# ── Agent 4: TTS (Kokoro/edge) + CLOCK ANCHOR ─────────────────────────────────
 def agent_tts():
     while not stop_flag.is_set():
         try:
-            emotion, text = tts_q.get(timeout=0.5)
+            emotion, dubbed, target_s = tts_q.get(timeout=0.5)
         except queue.Empty:
             continue
 
-        mp3 = to_speech_mp3(text, emotion)
+        # Clean → natural educational Hinglish (same path as Video URL mode)
+        spoken = polish_hinglish(clean_text(dubbed))
+        if not spoken:
+            continue
+
+        tmp = os.path.join(tempfile.gettempdir(), f"livedub_{threading.get_ident()}.mp3")
+        try:
+            # Synthesize via Kokoro (→ edge fallback). _synth_one adds punctuation
+            # pauses internally and runs at a neutral pace.
+            ok = asyncio.run(_dubber._synth_one(spoken, tmp, emotion))
+            if not ok or not os.path.exists(tmp):
+                continue
+            # CLOCK ANCHOR: constrain the dub to the speaker's exact window
+            # (0.85–1.15× + hard trim). Guarantees output duration ≤ the input
+            # phrase duration, so the dub can never run into the next phrase —
+            # this is what permanently prevents 24h accumulation drift.
+            fit_to_duration(tmp, target_s)
+            with open(tmp, "rb") as f:
+                mp3 = f.read()
+        except Exception as e:
+            print(f"[tts] failed: {e}")
+            continue
+        finally:
+            try: os.unlink(tmp)
+            except OSError: pass
+
         if not mp3:
             continue
         try:
@@ -382,7 +421,7 @@ def main():
     print(f" Language : {lang.name}  |  Voice: {languages.voice()}")
     print(f" STT      : Groq {STT_MODEL}")
     print(f" Translate: Groq {TRANSLATE_MODEL}")
-    print(f" TTS      : edge-tts")
+    print(f" TTS      : {_args.tts}  (clock-anchored 0.85–1.15× to each phrase)")
     print(f" Capture  : {CAPTURE_SOURCE}")
     print(" Ctrl+C to stop")
     print("=" * 60)
