@@ -103,16 +103,15 @@ window.electronAPI.onMpvReady(() => {
 });
 
 window.electronAPI.onMpvTime(t => {
-    // ── Seek detection ────────────────────────────────────────────────
-    // If the playhead jumps (user dragged the mpv seek bar), re-sync the dub.
-    if (Math.abs(t - mpvTime) > 1.2) {
-        // Backward seek (rewind): re-enable every segment whose audio covers a
-        // point at/after the new position so it can play again. Without this,
-        // rewound segments stay flagged in playedSegments and the dub goes silent.
+    // ── Seek detection (BACKWARD only) ────────────────────────────────
+    // Only a clear rewind re-enables segments. Forward jumps are NOT treated as
+    // seeks: during normal playback the renderer can occasionally skip a few time
+    // ticks, and marking the skipped segments 'played' here would wrongly drop
+    // those sentences. playCurrentSegment already ignores passed segments.
+    if (t < mpvTime - 1.5) {
         if (manifest?.segments) {
             manifest.segments.forEach((s, i) => {
-                if (s && s.end > t) playedSegments.delete(i);   // future-of-now again
-                else if (s)        playedSegments.add(i);        // forward-seek: skip past ones
+                if (s && s.end > t) playedSegments.delete(i);   // replay from here
             });
         }
         window.electronAPI.stopDubAudio();   // kill whatever was mid-play

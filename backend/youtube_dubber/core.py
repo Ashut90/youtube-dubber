@@ -655,7 +655,11 @@ class Dubber:
                 print(f"[tts] segment {gi} failed: {e}", file=sys.stderr)
                 return
             if ok:
-                fit_to_duration(path, seg["end"] - seg["start"])
+                # Video URL mode: speed-match only, NEVER hard-trim. Segments use
+                # absolute caption timestamps (no drift to prevent) and the player
+                # queue handles any overrun — trimming here would cut off sentence
+                # ends. The hard clock-anchor (trim) is for the live pipeline only.
+                fit_to_duration(path, seg["end"] - seg["start"], hard_anchor=False)
                 metadata = {"start": seg["start"], "end": seg["end"],
                             "text": seg["text"], "dubbed": spoken, "emotion": emotion}
                 meta_path.write_text(json.dumps(metadata, ensure_ascii=False))
