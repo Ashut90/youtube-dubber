@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "youtube-dubber"
-version = "0.1.0"
+version = "0.1.1"
 description = "Dub any YouTube video into Hindi (and 19 other languages) with a casual, engaging neural voice."
-readme = "README.md"
+readme = "README_PYPI.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Ashutosh", email = "ashutosh.formin@gmail.com" }]
