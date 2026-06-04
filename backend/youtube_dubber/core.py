@@ -50,16 +50,19 @@ BATCH_SIZE = 20   # segments per Groq call
 TRANSLATE_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 # Emotion → prosody. Gives the voice dynamic intonation instead of a flat tone.
-#   (edge_rate_percent, edge_pitch_Hz, kokoro_speed)
-# Excited/surprised speak faster & higher; sad/concerned slower & lower.
-EMOTION_PROSODY = {
-    "excited":   (18,  4, 1.12),
-    "surprised": (15,  5, 1.08),
-    "humorous":  (14,  3, 1.06),
-    "neutral":   (10,  0, 1.00),
-    "angry":     (14,  1, 1.08),
-    "concerned": ( 6, -2, 0.95),
-    "sad":       ( 2, -3, 0.90),
+# Emotion → PITCH offset (Hz) for edge-tts. Pitch is used (not rate/speed)
+# because pacing is owned entirely by fit_to_duration() — varying speed here
+# too would compound and cause the jittery, unbalanced tempo. Kokoro has no
+# pitch control, so its emotion expressiveness comes from the source text's
+# punctuation/phrasing rather than this map.
+EMOTION_PITCH = {
+    "excited":   4,
+    "surprised": 5,
+    "humorous":  3,
+    "neutral":   0,
+    "angry":     1,
+    "concerned": -2,
+    "sad":       -3,
 }
 
 # ── Kokoro TTS (opt-in, local GPU) ────────────────────────────────────────────
@@ -257,15 +260,38 @@ def get_audio_duration(path: str) -> float:
         return 0.0
 
 
-def stretch(src: str, target_dur: float):
-    """Compress dubbed audio to fit the segment window (speed-up only, ≤1.4×)."""
+def add_pauses(text: str) -> str:
+    """Normalize punctuation so the TTS phonemizer inserts natural breathing
+    pauses. espeak-ng (Kokoro) and edge pause on . , ? ! — but the Hindi danda
+    '।' is often ignored and run-on text gets rushed. So: danda → period, ensure
+    a single space after every punctuation mark, and add a gentle pause after
+    clause-ending punctuation. (Spaces alone do NOT create pauses — punctuation
+    does — which is why this normalizes marks rather than padding spaces.)"""
+    if not text:
+        return text
+    text = text.replace("।", ". ")
+    # tighten "word ,word" / "word.word" → "word, word." with one trailing space
+    text = re.sub(r"\s*([,;:])\s*", r"\1 ", text)
+    text = re.sub(r"\s*([.?!])\s*", r"\1 ", text)
+    # an ellipsis after sentence ends gives espeak a longer, natural breath
+    text = re.sub(r"([.?!]) ", r"\1 … ", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def fit_to_duration(src: str, target_dur: float, lo: float = 0.8, hi: float = 1.2):
+    """Speed-match a clip to its time window with ffmpeg atempo, bounded to a
+    natural [lo, hi] range. BIDIRECTIONAL: slows a too-short clip down to fill
+    the window (no dead air) and gently speeds a too-long clip up (no chipmunk).
+    This is the single pacing authority — synthesis is done at a neutral pace so
+    the two never compound."""
     actual = get_audio_duration(src)
     if actual <= 0 or target_dur <= 0:
         return
-    if actual <= target_dur * 1.05:
-        return
-    ratio = min(1.4, actual / target_dur)
-    out = src.replace(".mp3", "_s.mp3")
+    ratio = actual / target_dur          # >1 → too long (speed up); <1 → too short (slow down)
+    if 0.95 <= ratio <= 1.05:
+        return                            # close enough — leave it natural
+    ratio = max(lo, min(hi, ratio))       # natural bounds, no warping
+    out = src.replace(".mp3", "_f.mp3")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "quiet",
                     "-i", src, "-af", f"atempo={ratio:.3f}", out], check=False)
     if Path(out).exists():
@@ -502,10 +528,11 @@ class Dubber:
         return False
 
     async def _synth_one(self, text: str, path: str, emotion: str = "neutral") -> bool:
-        """Synthesize one clip. Text is already cleaned/slang-applied by the
-        caller (so subtitle == audio). Dispatches to Kokoro if requested &
-        supported, otherwise (or on any Kokoro failure) uses edge-tts."""
-        text = (text or "").strip()
+        """Synthesize one clip at a NEUTRAL pace. Punctuation pauses are added
+        here; final pacing (speed-match to the time window) is applied separately
+        by fit_to_duration() so the two never compound. Dispatches to Kokoro if
+        requested & supported, otherwise (or on any failure) uses edge-tts."""
+        text = add_pauses((text or "").strip())
         if not text:
             return False
 
@@ -518,10 +545,9 @@ class Dubber:
         return await self._synth_edge(text, path, emotion)
 
     async def _synth_edge(self, text: str, path: str, emotion: str = "neutral") -> bool:
-        r, p, _ = EMOTION_PROSODY.get(emotion, EMOTION_PROSODY["neutral"])
-        if self.lang.name == "Hindi":
-            r += 2; p += 1                      # a touch more energy for Hindi
-        rate  = f"{'+' if r >= 0 else ''}{r}%"
+        # Neutral rate (pacing is owned by fit_to_duration); emotion → pitch only.
+        p = EMOTION_PITCH.get(emotion, 0)
+        rate  = "+6%"                                   # natural speaking pace
         pitch = f"{'+' if p >= 0 else ''}{p}Hz"
         communicate = edge_tts.Communicate(text, self.voice, rate=rate, pitch=pitch)
         mp3 = b""
@@ -535,8 +561,8 @@ class Dubber:
         return False
 
     async def _synth_kokoro(self, text: str, path: str, emotion: str = "neutral") -> bool:
-        """Local Kokoro-82M synthesis. Returns False on any problem so the
-        caller falls back to edge-tts — never raises into the pipeline."""
+        """Local Kokoro-82M synthesis at neutral speed (1.0). Returns False on any
+        problem so the caller falls back to edge-tts — never raises."""
         engine = _KokoroEngine.get()
         if engine is None:
             return False
@@ -544,7 +570,7 @@ class Dubber:
         if not cfg:
             return False
         voice = cfg["male"] if self.gender == "male" else cfg["female"]
-        speed = EMOTION_PROSODY.get(emotion, EMOTION_PROSODY["neutral"])[2]
+        speed = 1.0    # neutral — fit_to_duration handles all pacing
         try:
             import numpy as np
             # kokoro.create is synchronous → run off the event loop
@@ -607,7 +633,7 @@ class Dubber:
                 print(f"[tts] segment {gi} failed: {e}", file=sys.stderr)
                 return
             if ok:
-                stretch(path, seg["end"] - seg["start"])
+                fit_to_duration(path, seg["end"] - seg["start"])
                 metadata = {"start": seg["start"], "end": seg["end"],
                             "text": seg["text"], "dubbed": spoken, "emotion": emotion}
                 meta_path.write_text(json.dumps(metadata, ensure_ascii=False))
