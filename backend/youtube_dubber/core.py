@@ -118,24 +118,32 @@ _TECH_EN = {
 # especially over long 8–24 h runs. This is the safety net that rewrites those
 # artifacts back into NATURAL educational Hinglish (fluent Hindi spine + English
 # tech terms). Devanagari patterns are no-ops for non-Hindi languages.
+# Latin/Devanagari spellings of the street fillers (case-insensitive matching).
+_YAAR = r"(?:यार|यर|yaar|yar|yr)"
+_BHAI = r"(?:भाई|भैया|bhai|bhaiya)"
+_BOSS = r"(?:बॉस|boss)"
+_FILLER = rf"(?:{_YAAR}|{_BHAI}|{_BOSS})"
+
 _POLISH = [
-    (r"वेलकम\s*यार",                 "स्वागत है"),
-    (r"\bwelcome\s*यार\b",           "स्वागत है"),
-    (r"थैंक\s*यू\s*यार",              "धन्यवाद"),
-    (r"प्लीज़",                       "कृपया"),
-    (r"हे\s+दोस्तों",                 "नमस्ते दोस्तों"),
-    (r"दिमाग\s*में\s*बिठा\s*लो",      "ध्यान से समझिए"),
-    (r"(लोचा|\blocha\b)",            "समस्या"),
-    (r"(जुगाड़|\bjugaad\b)",          "तरीका"),
-    (r"scene\s*ये\s*है",             "बात यह है"),
-    (r"एकदम\s*गज़ब\s*है",            "बहुत बढ़िया है"),
-    # collapse doubled fillers: "यार भाई" → "यार"
-    (r"\b(यार|भाई|बॉस)[\s,]+(यार|भाई|बॉस)\b", r"\1"),
-    # drop trailing street filler at clause end: "...है यार।" → "...है।"
-    (r"[\s,]+(यार|भाई|बॉस)(?=[।!?,]|\s|$)", ""),
+    # "welcome yaar" in ANY spelling/case → natural greeting
+    (rf"(?:वेलकम|welcome)\s*{_YAAR}",      "स्वागत है"),
+    (rf"(?:थैंक\s*यू|thank\s*you)\s*{_YAAR}", "धन्यवाद"),
+    (r"प्लीज़|please",                      "कृपया"),
+    (rf"(?:हे|hey|hi)\s+(?:दोस्तों|doston)", "नमस्ते दोस्तों"),
+    (r"दिमाग\s*में\s*बिठा\s*लो",            "ध्यान से समझिए"),
+    (r"(?:लोचा|locha)",                    "समस्या"),
+    (r"(?:जुगाड़|jugaad)",                  "तरीका"),
+    (r"scene\s*ये\s*है",                   "बात यह है"),
+    (r"एकदम\s*गज़ब\s*है",                  "बहुत बढ़िया है"),
+    # collapse doubled fillers: "yaar bhai" → "yaar"
+    (rf"\b{_FILLER}[\s,]+{_FILLER}\b",      ""),
+    # drop trailing street filler at a clause end: "...है yaar।" → "...है।"
+    (rf"[\s,]+{_FILLER}(?=[।!?,]|\s*$)",    ""),
     # soften aggressive leading hooks → instructor tone
-    (r"^\s*तो\s+भाई[\s,]+",          "तो "),
-    (r"^\s*(यार|बॉस|भाई)[\s,]+",      ""),
+    (rf"^\s*तो\s+{_BHAI}[\s,]+",            "तो "),
+    (rf"^\s*{_FILLER}[\s,]+",               ""),
+    # any remaining standalone filler word, mid-sentence → drop it
+    (rf"\s+{_FILLER}(?=\s)",                " "),
 ]
 
 
@@ -233,7 +241,7 @@ def polish_hinglish(text: str) -> str:
     for hi, en in _TECH_EN.items():
         text = text.replace(hi, en)
     for pattern, repl in _POLISH:
-        text = re.sub(pattern, repl, text)
+        text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
