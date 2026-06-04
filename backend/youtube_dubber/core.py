@@ -145,12 +145,16 @@ def merge_segments(segs: list[dict], min_dur=2.5, max_dur=7.0) -> list[dict]:
 
 
 def clean_text(text: str) -> str:
-    """Strip URLs, bracket fillers, and raw code lines before TTS."""
+    """Strip URLs, bracket fillers, and raw code lines before TTS.
+
+    Code/command lines are skipped (returns "") rather than read aloud — the
+    viewer can see them on screen. (Previously this injected a Hindi sentence,
+    which was wrong for the other 19 target languages.)"""
     text = _URL_RE.sub("", text).strip()
     if _FILLER_RE.match(text):
         return ""
     if _CODE_PATTERNS.search(text):
-        return "स्क्रीन पर दिख रहे इस code को ध्यान से देखो।"
+        return ""
     return text
 
 

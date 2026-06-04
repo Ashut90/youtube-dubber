@@ -33,12 +33,31 @@ const $subDub       = document.getElementById('sub-dub');
 const $mpvTimeDisp  = document.getElementById('mpv-time-display');
 
 let videoGender = 'male';
+let hasDubbed   = false;   // becomes true after the first Dub It
+
+// Switching voice or language re-dubs automatically (once the video is loaded).
+// Already-generated voice/lang combos load instantly from cache; new ones
+// regenerate. Without this, changing the dropdown silently did nothing.
+function reDubIfActive(reason) {
+    const url = $urlInput.value.trim();
+    if (hasDubbed && url) {
+        setBadge('loading', reason);
+        startProcessing(url);
+    }
+}
+
 [document.getElementById('vid-btn-male'), document.getElementById('vid-btn-female')].forEach(b => {
     b.addEventListener('click', () => {
+        if (b.dataset.g === videoGender) return;     // no change
         videoGender = b.dataset.g;
         document.getElementById('vid-btn-male').classList.toggle('active',   videoGender === 'male');
         document.getElementById('vid-btn-female').classList.toggle('active', videoGender === 'female');
+        reDubIfActive(`Switching to ${videoGender} voice…`);
     });
+});
+
+$langVideo.addEventListener('change', () => {
+    reDubIfActive(`Switching to ${$langVideo.options[$langVideo.selectedIndex].text}…`);
 });
 
 $btnProcess.addEventListener('click', () => {
@@ -49,6 +68,7 @@ $btnProcess.addEventListener('click', () => {
 $urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') $btnProcess.click(); });
 
 function startProcessing(url) {
+    hasDubbed = true;
     $progressWrap.classList.remove('hidden');
     $btnProcess.disabled = true;
     setBadge('loading', 'Launching mpv…');
@@ -83,6 +103,21 @@ window.electronAPI.onMpvReady(() => {
 });
 
 window.electronAPI.onMpvTime(t => {
+    // ── Seek detection ────────────────────────────────────────────────
+    // If the playhead jumps (user dragged the mpv seek bar), re-sync the dub.
+    if (Math.abs(t - mpvTime) > 1.2) {
+        // Backward seek (rewind): re-enable every segment whose audio covers a
+        // point at/after the new position so it can play again. Without this,
+        // rewound segments stay flagged in playedSegments and the dub goes silent.
+        if (manifest?.segments) {
+            manifest.segments.forEach((s, i) => {
+                if (s && s.end > t) playedSegments.delete(i);   // future-of-now again
+                else if (s)        playedSegments.add(i);        // forward-seek: skip past ones
+            });
+        }
+        window.electronAPI.stopDubAudio();   // kill whatever was mid-play
+    }
+
     mpvTime = t;
     if ($mpvTimeDisp) $mpvTimeDisp.textContent = fmtTime(t);
     updateSubtitles();
