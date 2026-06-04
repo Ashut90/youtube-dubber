@@ -49,6 +49,19 @@ BATCH_SIZE = 20   # segments per Groq call
 # rate-limits (429) it falls back to [1] so output never stops.
 TRANSLATE_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
+# Emotion → prosody. Gives the voice dynamic intonation instead of a flat tone.
+#   (edge_rate_percent, edge_pitch_Hz, kokoro_speed)
+# Excited/surprised speak faster & higher; sad/concerned slower & lower.
+EMOTION_PROSODY = {
+    "excited":   (18,  4, 1.12),
+    "surprised": (15,  5, 1.08),
+    "humorous":  (14,  3, 1.06),
+    "neutral":   (10,  0, 1.00),
+    "angry":     (14,  1, 1.08),
+    "concerned": ( 6, -2, 0.95),
+    "sad":       ( 2, -3, 0.90),
+}
+
 # ── Kokoro TTS (opt-in, local GPU) ────────────────────────────────────────────
 # Maps a dub-language key → (male voice, female voice, kokoro language code).
 # Only languages listed here can use Kokoro; everything else (and any failure)
@@ -420,9 +433,25 @@ class Dubber:
                 f"5. Keep each line SHORT to match the original speech timing."
             )
 
+        # Speaker-gender grammar: many languages (Hindi, Urdu, Punjabi, Spanish,
+        # French, Italian, Portuguese, Russian, Marathi, Gujarati…) inflect verbs/
+        # adjectives by the speaker's gender. Tell the model who is speaking so a
+        # female voice says "जा रही हूँ / करूँगी" and a male voice "जा रहा हूँ / करूँगा".
+        if self.gender == "female":
+            gender_note = (
+                "\nSPEAKER GENDER: The narrator is FEMALE. Use first-person FEMININE "
+                "verb/adjective forms (Hindi: रही हूँ, करूँगी, गई, सकती; "
+                "Spanish: -a; etc.). Never use masculine self-reference."
+            )
+        else:
+            gender_note = (
+                "\nSPEAKER GENDER: The narrator is MALE. Use first-person MASCULINE "
+                "verb/adjective forms (Hindi: रहा हूँ, करूँगा, गया, सकता; Spanish: -o; etc.)."
+            )
+
         self._system_prompt = (
             f"Dub this video to {lang.name}. The source text may be in any language — "
-            f"translate from whatever language it is. {eng}\n\n"
+            f"translate from whatever language it is. {eng}{gender_note}\n\n"
             f"For EACH numbered source line output: N|EMOTION|{lang.name} translation\n"
             f"EMOTION: excited neutral sad humorous concerned angry surprised\n"
             f"One output line per input line. No explanations."
@@ -436,24 +465,28 @@ class Dubber:
         self._last_dub = text
         return False
 
-    async def _synth_one(self, text: str, path: str) -> bool:
-        """Synthesize one clip. Dispatches to Kokoro if requested & supported,
-        otherwise (or on any Kokoro failure) uses edge-tts."""
-        text = apply_slang(clean_text(text.strip()))
+    async def _synth_one(self, text: str, path: str, emotion: str = "neutral") -> bool:
+        """Synthesize one clip. Text is already cleaned/slang-applied by the
+        caller (so subtitle == audio). Dispatches to Kokoro if requested &
+        supported, otherwise (or on any Kokoro failure) uses edge-tts."""
+        text = (text or "").strip()
         if not text:
             return False
 
         # Opt-in Kokoro path — only for supported languages; falls back on failure
         if self.tts == "kokoro" and self.lang_key in KOKORO_VOICES:
-            if await self._synth_kokoro(text, path):
+            if await self._synth_kokoro(text, path, emotion):
                 return True
             # else: silently fall through to edge-tts below
 
-        return await self._synth_edge(text, path)
+        return await self._synth_edge(text, path, emotion)
 
-    async def _synth_edge(self, text: str, path: str) -> bool:
-        rate  = "+12%" if self.lang.name == "Hindi" else "+10%"
-        pitch = "+1Hz" if self.lang.name == "Hindi" else "+0Hz"
+    async def _synth_edge(self, text: str, path: str, emotion: str = "neutral") -> bool:
+        r, p, _ = EMOTION_PROSODY.get(emotion, EMOTION_PROSODY["neutral"])
+        if self.lang.name == "Hindi":
+            r += 2; p += 1                      # a touch more energy for Hindi
+        rate  = f"{'+' if r >= 0 else ''}{r}%"
+        pitch = f"{'+' if p >= 0 else ''}{p}Hz"
         communicate = edge_tts.Communicate(text, self.voice, rate=rate, pitch=pitch)
         mp3 = b""
         async for chunk in communicate.stream():
@@ -465,7 +498,7 @@ class Dubber:
             return True
         return False
 
-    async def _synth_kokoro(self, text: str, path: str) -> bool:
+    async def _synth_kokoro(self, text: str, path: str, emotion: str = "neutral") -> bool:
         """Local Kokoro-82M synthesis. Returns False on any problem so the
         caller falls back to edge-tts — never raises into the pipeline."""
         engine = _KokoroEngine.get()
@@ -475,11 +508,12 @@ class Dubber:
         if not cfg:
             return False
         voice = cfg["male"] if self.gender == "male" else cfg["female"]
+        speed = EMOTION_PROSODY.get(emotion, EMOTION_PROSODY["neutral"])[2]
         try:
             import numpy as np
             # kokoro.create is synchronous → run off the event loop
             samples, sr = await asyncio.to_thread(
-                lambda: engine.create(text, voice=voice, speed=1.0, lang=cfg["lang"])
+                lambda: engine.create(text, voice=voice, speed=speed, lang=cfg["lang"])
             )
             if samples is None or len(samples) == 0:
                 return False
@@ -519,20 +553,27 @@ class Dubber:
             dubbed = seg.get("dubbed", "")
             if not dubbed:
                 return
-            if self._is_duplicate_dub(dubbed):
+            # Process ONCE here (slang + URL/code cleaning) so the on-screen
+            # subtitle and the spoken audio are always identical. Previously this
+            # ran only inside synthesis, so the subtitle showed "स्वागत है" while
+            # the voice said "वेलकम यार".
+            spoken = apply_slang(clean_text(dubbed))
+            if not spoken:
+                return
+            if self._is_duplicate_dub(spoken):
                 print(f"[dedup] skipped duplicate dubbed segment {gi}", file=sys.stderr)
                 return
+            emotion = seg.get("emotion", "neutral")
             try:
                 async with sem:
-                    ok = await self._synth_one(dubbed, path)
+                    ok = await self._synth_one(spoken, path, emotion)
             except Exception as e:
                 print(f"[tts] segment {gi} failed: {e}", file=sys.stderr)
                 return
             if ok:
                 stretch(path, seg["end"] - seg["start"])
                 metadata = {"start": seg["start"], "end": seg["end"],
-                            "text": seg["text"], "dubbed": dubbed,
-                            "emotion": seg.get("emotion", "neutral")}
+                            "text": seg["text"], "dubbed": spoken, "emotion": emotion}
                 meta_path.write_text(json.dumps(metadata, ensure_ascii=False))
                 self._emit({"type": "segment", "index": gi, **metadata, "audio_file": path})
 
