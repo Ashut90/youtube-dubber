@@ -6,7 +6,7 @@ UI improvements, performance work, or documentation.
 > **Rule #1: Fork the repo. Do not push directly to `main`.**
 
 > **Rule #2: This project is GPL-3.0. Your fork must:**
-> - Credit the original: **ahsutosh / yt-hindi-dubber**
+> - Credit the original: **Ashut90 / youtube-dubber**
 > - Stay open source under GPL-3.0
 > - State what you changed
 >
@@ -37,14 +37,14 @@ Never clone the original repo directly — you won't have push access.
 ### 2. Clone your fork
 
 ```bash
-git clone https://github.com/<YOUR_USERNAME>/yt-hindi-dubber.git
-cd yt-hindi-dubber
+git clone https://github.com/<YOUR_USERNAME>/youtube-dubber.git
+cd youtube-dubber
 ```
 
 ### 3. Add the upstream remote (keeps your fork in sync)
 
 ```bash
-git remote add upstream https://github.com/ahsutosh/yt-hindi-dubber.git
+git remote add upstream https://github.com/Ashut90/youtube-dubber.git
 ```
 
 ### 4. Create a branch
