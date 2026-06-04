@@ -100,30 +100,43 @@ class _KokoroEngine:
             cls._engine = None
         return cls._engine
 
-_SLANG = {
-    "स्वागत है":       "वेलकम यार",
-    "कृपया ध्यान दें": "तो भाई देखो",
-    "उदाहरण के लिए":  "जैसे कि मतलब",
-    "शुरू करते हैं":   "चलो शुरू करते हैं!",
-    "यह बहुत अच्छा है":"ये एकदम गज़ब है!",
-    "नमस्ते दोस्तों":  "हे दोस्तों",
-    "धन्यवाद":         "थैंक यू यार",
-    "कृपया":           "प्लीज़",
-    "सदस्यता":         "subscribe",
-    "चलचित्र":         "video",
-    "निर्देशिका":      "directory / folder",
-    "प्रक्रिया":       "process",
-    "पथ":              "path",
-    "पुनरावृत्ति":     "loop",
-    "त्रुटि":          "error",
-    "समाधान":          "solution / jugaad",
-    "जटिल":            "complex / भारी",
-    "समारोह":          "function",
-    "आइए समझते हैं":   "तो भाई scene ये है कि",
-    "यह महत्वपूर्ण है":"इसे दिमाग में बिठा लो!",
-    "निष्कर्ष":        "सच्चाई तो ये है",
-    "समस्या":          "locha",
+# Formal Hindi tech words → their common English form. A real instructor keeps
+# technical terms in English ("directory", not "निर्देशिका") — this is the GOOD
+# part of code-switching, kept here.
+_TECH_EN = {
+    "निर्देशिका": "directory",
+    "प्रक्रिया":  "process",
+    "पथ":         "path",
+    "पुनरावृत्ति": "loop",
+    "त्रुटि":     "error",
+    "समारोह":     "function",
+    "चलचित्र":    "video",
+    "सदस्यता":    "subscribe",
 }
+
+# Corrective cleanup (regex). The model sometimes drifts into street slang —
+# especially over long 8–24 h runs. This is the safety net that rewrites those
+# artifacts back into NATURAL educational Hinglish (fluent Hindi spine + English
+# tech terms). Devanagari patterns are no-ops for non-Hindi languages.
+_POLISH = [
+    (r"वेलकम\s*यार",                 "स्वागत है"),
+    (r"\bwelcome\s*यार\b",           "स्वागत है"),
+    (r"थैंक\s*यू\s*यार",              "धन्यवाद"),
+    (r"प्लीज़",                       "कृपया"),
+    (r"हे\s+दोस्तों",                 "नमस्ते दोस्तों"),
+    (r"दिमाग\s*में\s*बिठा\s*लो",      "ध्यान से समझिए"),
+    (r"(लोचा|\blocha\b)",            "समस्या"),
+    (r"(जुगाड़|\bjugaad\b)",          "तरीका"),
+    (r"scene\s*ये\s*है",             "बात यह है"),
+    (r"एकदम\s*गज़ब\s*है",            "बहुत बढ़िया है"),
+    # collapse doubled fillers: "यार भाई" → "यार"
+    (r"\b(यार|भाई|बॉस)[\s,]+(यार|भाई|बॉस)\b", r"\1"),
+    # drop trailing street filler at clause end: "...है यार।" → "...है।"
+    (r"[\s,]+(यार|भाई|बॉस)(?=[।!?,]|\s|$)", ""),
+    # soften aggressive leading hooks → instructor tone
+    (r"^\s*तो\s+भाई[\s,]+",          "तो "),
+    (r"^\s*(यार|बॉस|भाई)[\s,]+",      ""),
+]
 
 
 class DubError(Exception):
@@ -213,10 +226,15 @@ def clean_text(text: str) -> str:
     return text
 
 
-def apply_slang(text: str) -> str:
-    for formal, casual in _SLANG.items():
-        text = text.replace(formal, casual)
-    return text
+def polish_hinglish(text: str) -> str:
+    """Post-process the model output into natural educational Hinglish:
+    keep technical terms in English, and rewrite street-slang artifacts back to
+    a fluent, grammatical form. Hindi-targeted; harmless for other languages."""
+    for hi, en in _TECH_EN.items():
+        text = text.replace(hi, en)
+    for pattern, repl in _POLISH:
+        text = re.sub(pattern, repl, text)
+    return re.sub(r"\s{2,}", " ", text).strip()
 
 
 def get_audio_duration(path: str) -> float:
@@ -392,45 +410,55 @@ class Dubber:
 
         if lang.keep_english and lang.name == "Hindi":
             eng = (
-                "You are a high-energy Indian YouTube creator dubbing a video into casual Hinglish.\n\n"
+                "You are a clear, warm Hindi INSTRUCTOR dubbing an educational tutorial — "
+                "like a top Indian teaching channel (CodeWithHarry / Apna College style). "
+                "NOT street slang, NOT a stiff textbook.\n\n"
+                "CORE PRINCIPLE — Natural Educational Hinglish:\n"
+                "Keep the grammatical SPINE in fluent, correct Hindi, and weave in English "
+                "ONLY for technical/domain terms. It must read like a real Hindi teacher "
+                "speaking — never a word-by-word slang swap.\n\n"
                 "RULES:\n"
-                "1. Use punchy hooks: 'तो भाई', 'यार', 'देखो', 'मतलब', 'बॉस', 'चलो', 'सुनो'.\n"
-                "2. NEVER translate technical terms — keep them English but may phonetically hint: "
-                "'chmod', 'sudo', 'grep', 'pointer', 'loop', 'array', 'function', 'RAM', 'GPIO', etc.\n"
-                "3. Use casual endings: 'करो'/'कर देना' instead of 'करें'; 'है' instead of 'हैं'.\n"
-                "4. Add '!' for exciting moments to drive TTS expression.\n"
-                "5. For pure code lines (bash commands, syntax) output ONLY: "
-                "'स्क्रीन पर दिख रहे इस code को ध्यान से देखो।'\n"
-                "6. Keep output SHORT — match original speech timing.\n\n"
-                "EXAMPLES:\n"
-                "❌ 'यदि आपके पास रूट विशेषाधिकार नहीं हैं'\n"
-                "✅ 'तो भाई, अगर तुम्हारे पास sudo power नहीं है'\n"
-                "❌ 'हमें text का उपयोग क्यों करना चाहिए'\n"
-                "✅ 'यार, text use क्यों करते हैं देखो!'\n"
+                "1. Use proper Hindi structure, postpositions (में, से, का, को, पर) and "
+                "correct verb conjugation. The Hindi must be grammatically clean.\n"
+                "2. Keep technical terms in English: shell, script, command, function, "
+                "variable, file, loop, array, sudo, directory, etc. Never translate them.\n"
+                "3. Instructor tone — clear and friendly. Do NOT pepper lines with 'यार', "
+                "'भाई', 'बॉस'. Natural connectors like 'तो', 'देखिए', 'चलिए', 'ध्यान दीजिए' "
+                "are good.\n"
+                "4. Explain like teaching a student — warm, precise, respectful (आप/आपको).\n"
+                "5. Keep each line concise to match the original speech timing.\n\n"
+                "BEFORE → AFTER — copy this STRUCTURE (fluent Hindi spine + English terms):\n"
+                "❌ 'course me aapka welcome yaar'\n"
+                "✅ 'हमारे shell scripting course में आपका स्वागत है'\n"
+                "❌ 'तो भाई, अगर sudo power नहीं है'\n"
+                "✅ 'अगर आपके पास sudo access नहीं है, तो'\n"
+                "❌ 'यार ये command चला दो'\n"
+                "✅ 'अब हम यह command चलाएँगे'\n"
+                "❌ 'देखो ये function ka kaam hai'\n"
+                "✅ 'इस function का काम यह है कि'\n"
+                "❌ 'इसे दिमाग में बिठा लो!'\n"
+                "✅ 'इस बात को ध्यान से समझिए'\n"
             )
         elif lang.keep_english:
             eng = (
-                f"You are a high-energy {lang.name} YouTuber dubbing a video.\n"
+                f"You are a clear, friendly {lang.name} INSTRUCTOR dubbing an educational video.\n"
                 f"RULES:\n"
-                f"1. NEVER translate technical terms (code, command names, library/brand "
-                f"names, RAM, GPU, function, loop, array…) — keep them in English.\n"
-                f"2. Open clauses with casual spoken hooks/fillers like: {lang.fillers}.\n"
-                f"3. Use everyday casual speech, NOT textbook/formal grammar.\n"
-                f"4. Add '!' on exciting lines so the voice sounds energetic.\n"
-                f"5. For pure code/command lines, just tell the viewer to look at the screen.\n"
-                f"6. Keep each line SHORT to match the original speech timing."
+                f"1. Keep the grammatical spine in fluent, correct {lang.name}; weave in "
+                f"English ONLY for technical terms (command, function, loop, array, file…).\n"
+                f"2. Speak like a real teacher — natural connectors ({lang.fillers}) are "
+                f"fine, but do NOT overuse casual slang.\n"
+                f"3. Correct grammar and sentence structure; keep technical terms in English.\n"
+                f"4. Keep each line concise to match the original speech timing."
             )
         else:
             eng = (
-                f"You are an engaging, friendly {lang.name} YouTuber dubbing a video.\n"
+                f"You are a clear, engaging {lang.name} INSTRUCTOR dubbing an educational video.\n"
                 f"RULES:\n"
-                f"1. Translate into natural, casual spoken {lang.name} — like talking to a "
-                f"friend, NOT a formal textbook or news anchor.\n"
-                f"2. Open clauses with casual spoken connectors/fillers like: {lang.fillers}.\n"
-                f"3. Keep widely-known technical/brand terms in their common form "
-                f"(don't force awkward literal translations).\n"
-                f"4. Add '!' on exciting lines so the voice sounds energetic.\n"
-                f"5. Keep each line SHORT to match the original speech timing."
+                f"1. Translate into natural, fluent, grammatically-correct spoken {lang.name} — "
+                f"warm and clear like a good teacher, not a stiff textbook or street slang.\n"
+                f"2. Natural connectors ({lang.fillers}) are fine; don't overuse casual filler.\n"
+                f"3. Keep widely-known technical/brand terms in their common form.\n"
+                f"4. Keep each line concise to match the original speech timing."
             )
 
         # Speaker-gender grammar: many languages (Hindi, Urdu, Punjabi, Spanish,
@@ -557,7 +585,7 @@ class Dubber:
             # subtitle and the spoken audio are always identical. Previously this
             # ran only inside synthesis, so the subtitle showed "स्वागत है" while
             # the voice said "वेलकम यार".
-            spoken = apply_slang(clean_text(dubbed))
+            spoken = polish_hinglish(clean_text(dubbed))
             if not spoken:
                 return
             if self._is_duplicate_dub(spoken):
