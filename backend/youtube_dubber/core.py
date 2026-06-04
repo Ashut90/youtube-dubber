@@ -49,6 +49,44 @@ BATCH_SIZE = 20   # segments per Groq call
 # rate-limits (429) it falls back to [1] so output never stops.
 TRANSLATE_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
+# ── Kokoro TTS (opt-in, local GPU) ────────────────────────────────────────────
+# Maps a dub-language key → (male voice, female voice, kokoro language code).
+# Only languages listed here can use Kokoro; everything else (and any failure)
+# transparently falls back to edge-tts. Voice IDs are Kokoro v1.0 voices.
+# Start small (Hindi + English) — verified working before expanding.
+KOKORO_VOICES = {
+    "english": {"male": "am_michael", "female": "af_heart",  "lang": "en-us"},
+    "hindi":   {"male": "hm_omega",   "female": "hf_alpha",  "lang": "hi"},
+}
+# Model/voice file locations — override with env vars if stored elsewhere.
+KOKORO_MODEL_PATH  = os.environ.get("KOKORO_MODEL",  "kokoro-v1.0.onnx")
+KOKORO_VOICES_PATH = os.environ.get("KOKORO_VOICES", "voices-v1.0.bin")
+
+
+class _KokoroEngine:
+    """Lazily-loaded singleton wrapper around kokoro-onnx.
+
+    The model is loaded once on first use. If kokoro-onnx isn't installed, the
+    model files are missing, or CUDA isn't available, it marks itself failed and
+    returns None forever after — callers then fall back to edge-tts.
+    """
+    _engine = None
+    _tried  = False
+
+    @classmethod
+    def get(cls):
+        if cls._tried:
+            return cls._engine
+        cls._tried = True
+        try:
+            from kokoro_onnx import Kokoro   # type: ignore
+            cls._engine = Kokoro(KOKORO_MODEL_PATH, KOKORO_VOICES_PATH)
+            print(f"[kokoro] loaded ({KOKORO_MODEL_PATH})", file=sys.stderr)
+        except Exception as e:
+            print(f"[kokoro] unavailable → using edge-tts ({e})", file=sys.stderr)
+            cls._engine = None
+        return cls._engine
+
 _SLANG = {
     "स्वागत है":       "वेलकम यार",
     "कृपया ध्यान दें": "तो भाई देखो",
@@ -208,6 +246,10 @@ class Dubber:
     source_lang : source caption language code, or "auto" to detect
     on_event : optional callback receiving event dicts (progress/segment/done)
     groq_api_key : Groq key; falls back to the GROQ_API_KEY env var
+    tts : "edge" (default, cloud, all languages) or "kokoro" (local GPU, opt-in,
+          higher quality, only the languages in KOKORO_VOICES). Kokoro falls back
+          to edge-tts automatically if it isn't installed or the language/voice
+          isn't supported — so nothing breaks.
     """
 
     def __init__(
@@ -218,6 +260,7 @@ class Dubber:
         source_lang: str = "auto",
         on_event: Optional[Callable[[dict], None]] = None,
         groq_api_key: Optional[str] = None,
+        tts: str = "edge",
     ):
         languages.configure(lang, gender)
         self.lang        = languages.current()
@@ -229,6 +272,7 @@ class Dubber:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self._on_event   = on_event
         self._api_key    = groq_api_key or os.environ.get("GROQ_API_KEY")
+        self.tts         = (tts or "edge").lower()
 
         # per-run state
         self.detected_src   = "en"
@@ -393,9 +437,21 @@ class Dubber:
         return False
 
     async def _synth_one(self, text: str, path: str) -> bool:
+        """Synthesize one clip. Dispatches to Kokoro if requested & supported,
+        otherwise (or on any Kokoro failure) uses edge-tts."""
         text = apply_slang(clean_text(text.strip()))
         if not text:
             return False
+
+        # Opt-in Kokoro path — only for supported languages; falls back on failure
+        if self.tts == "kokoro" and self.lang_key in KOKORO_VOICES:
+            if await self._synth_kokoro(text, path):
+                return True
+            # else: silently fall through to edge-tts below
+
+        return await self._synth_edge(text, path)
+
+    async def _synth_edge(self, text: str, path: str) -> bool:
         rate  = "+12%" if self.lang.name == "Hindi" else "+10%"
         pitch = "+1Hz" if self.lang.name == "Hindi" else "+0Hz"
         communicate = edge_tts.Communicate(text, self.voice, rate=rate, pitch=pitch)
@@ -408,6 +464,38 @@ class Dubber:
                 f.write(mp3)
             return True
         return False
+
+    async def _synth_kokoro(self, text: str, path: str) -> bool:
+        """Local Kokoro-82M synthesis. Returns False on any problem so the
+        caller falls back to edge-tts — never raises into the pipeline."""
+        engine = _KokoroEngine.get()
+        if engine is None:
+            return False
+        cfg = KOKORO_VOICES.get(self.lang_key)
+        if not cfg:
+            return False
+        voice = cfg["male"] if self.gender == "male" else cfg["female"]
+        try:
+            import numpy as np
+            # kokoro.create is synchronous → run off the event loop
+            samples, sr = await asyncio.to_thread(
+                lambda: engine.create(text, voice=voice, speed=1.0, lang=cfg["lang"])
+            )
+            if samples is None or len(samples) == 0:
+                return False
+            # float32 [-1,1] → 16-bit PCM → mp3 via ffmpeg (keeps .mp3 cache format)
+            pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype("<i2").tobytes()
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "quiet",
+                 "-f", "s16le", "-ar", str(int(sr)), "-ac", "1",
+                 "-i", "pipe:0", path],
+                input=pcm, check=False,
+            )
+            return Path(path).exists() and Path(path).stat().st_size > 0
+        except Exception as e:
+            print(f"[kokoro] synth failed for {self.lang_key} → edge-tts ({e})",
+                  file=sys.stderr)
+            return False
 
     async def _translate_tts_pipeline(self, segments: list[dict], audio_dir: Path):
         from groq import Groq
@@ -530,7 +618,10 @@ class Dubber:
         self._progress("captions", 100, f"{len(segments)} segments")
 
         vid = video_id(url)
-        audio_dir = self.out_dir / "audio" / f"{vid}_{self.lang_key}_{self.gender}"
+        # Namespace cache by engine so Kokoro and edge-tts audio never collide.
+        # edge keeps the historical "{vid}_{lang}_{gender}" path (caches stay valid).
+        tts_suffix = "" if self.tts == "edge" else f"_{self.tts}"
+        audio_dir = self.out_dir / "audio" / f"{vid}_{self.lang_key}_{self.gender}{tts_suffix}"
         audio_dir.mkdir(parents=True, exist_ok=True)
 
         existing   = len(list(audio_dir.glob("seg_*.mp3")))
@@ -574,9 +665,14 @@ def dub(
     source_lang: str = "auto",
     on_event: Optional[Callable[[dict], None]] = None,
     groq_api_key: Optional[str] = None,
+    tts: str = "edge",
 ) -> dict:
-    """One-call convenience wrapper around :class:`Dubber`."""
+    """One-call convenience wrapper around :class:`Dubber`.
+
+    Set ``tts="kokoro"`` to use the local Kokoro-82M backend (Hindi/English for
+    now); it falls back to edge-tts automatically if unavailable.
+    """
     return Dubber(
         lang=lang, gender=gender, out_dir=out, source_lang=source_lang,
-        on_event=on_event, groq_api_key=groq_api_key,
+        on_event=on_event, groq_api_key=groq_api_key, tts=tts,
     ).run(url)

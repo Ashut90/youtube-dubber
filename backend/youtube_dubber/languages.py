@@ -154,6 +154,14 @@ LANGUAGES: dict[str, LangConfig] = {
         full_stop=".", fillers="allora, guarda, cioè, in realtà",
         keep_english=False,
     ),
+    # English as a dub *target* (e.g. dub a foreign-language video into English).
+    # Also the easiest language to verify the Kokoro TTS backend with.
+    "english": LangConfig(
+        name="English", script="Latin",
+        voice_male="en-US-GuyNeural",       voice_female="en-US-AriaNeural",
+        full_stop=".", fillers="so, look, you know, basically, alright",
+        keep_english=False,
+    ),
 }
 
 # ── Runtime config ────────────────────────────────────────────────────────────

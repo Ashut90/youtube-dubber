@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "youtube-dubber"
-version = "0.1.2"
+version = "0.2.0"
 description = "Dub any YouTube video into Hindi (and 19 other languages) with a casual, engaging neural voice."
 readme = "README_PYPI.md"
 requires-python = ">=3.10"
@@ -34,6 +34,9 @@ dependencies = [
 # yt-dlp is also required at runtime; install it however you prefer
 # (pip install youtube-dubber[ytdlp] pulls it in). ffmpeg must be on PATH.
 ytdlp = ["yt-dlp"]
+# Opt-in local Kokoro-82M TTS backend (Hindi/English). For GPU add
+# onnxruntime-gpu separately and download the model files — see KOKORO_SETUP.md.
+kokoro = ["kokoro-onnx>=0.4", "numpy"]
 
 [project.urls]
 Homepage = "https://github.com/Ashut90/youtube-dubber"
