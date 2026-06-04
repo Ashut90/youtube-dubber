@@ -45,6 +45,10 @@ _CODE_PATTERNS = re.compile(
 
 BATCH_SIZE = 20   # segments per Groq call
 
+# Translation models, best-quality first. The pipeline tries [0]; if it
+# rate-limits (429) it falls back to [1] so output never stops.
+TRANSLATE_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+
 _SLANG = {
     "स्वागत है":       "वेलकम यार",
     "कृपया ध्यान दें": "तो भाई देखो",
@@ -459,10 +463,14 @@ class Dubber:
 
             lines = "\n".join(f"{i+1}. {s['text']}" for i, s in enumerate(batch))
             got_translation = False
+            # Quality-first with graceful fallback: try the big 70B model, but the
+            # moment it rate-limits (429) drop to the fast 8B so the pipeline never
+            # stalls. Attempt 0 → 70B; attempts 1-5 → 8B with backoff.
             for attempt in range(6):
+                model = TRANSLATE_MODELS[0] if attempt == 0 else TRANSLATE_MODELS[1]
                 try:
                     resp = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
+                        model=model,
                         messages=[{"role": "system", "content": self.get_system_prompt()},
                                   {"role": "user",   "content": lines}],
                         temperature=0.6, max_tokens=BATCH_SIZE * 80, timeout=30,
@@ -486,10 +494,14 @@ class Dubber:
                 except Exception as e:
                     msg = str(e)
                     if "rate_limit" in msg or "429" in msg:
-                        self._progress("translate", pct, f"Rate limited — retry {attempt+1}/6 in 6s…")
-                        await asyncio.sleep(6)
+                        if attempt == 0:
+                            # 70B is busy — switch to 8B immediately, no wait
+                            self._progress("translate", pct, "70B busy → using fast model…")
+                        else:
+                            self._progress("translate", pct, f"Rate limited — retry {attempt}/5 in 6s…")
+                            await asyncio.sleep(6)
                     else:
-                        print(f"[translate] error: {e}", file=sys.stderr)
+                        print(f"[translate] error ({model}): {e}", file=sys.stderr)
                         await asyncio.sleep(2)
 
             if not got_translation and self.detected_src == "en":
