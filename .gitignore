@@ -17,6 +17,12 @@ build/
 *.egg-info/
 backend/**/*.egg-info/
 
+# Kokoro model files — large (~310 MB), downloaded separately (see KOKORO_SETUP.md)
+*.onnx
+*.bin
+backend/kokoro-*.onnx
+backend/voices-*.bin
+
 # Secrets — never commit your API key
 .env
 .env.*

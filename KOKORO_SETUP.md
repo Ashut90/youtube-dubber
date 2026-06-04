@@ -14,14 +14,18 @@ uses edge-tts.
 ## Step 1 — Install the runtime
 
 ```bash
-# In the same Python environment you run the backend from:
-pip install kokoro-onnx numpy
+# Ubuntu 24.04+ blocks system-wide pip by default (PEP 668). Use the same
+# --break-system-packages flag your other deps (edge-tts, groq) use, so Kokoro
+# lands where the app's system python3 can find it:
+pip install kokoro-onnx onnxruntime-gpu numpy --break-system-packages
 
-# For GPU (CUDA) acceleration on your RTX 2060:
-pip install onnxruntime-gpu
-# If you only have CPU or CUDA is flaky, plain onnxruntime also works (slower):
-# pip install onnxruntime
+# CPU-only (or if CUDA is flaky) — plain onnxruntime instead of -gpu:
+# pip install kokoro-onnx onnxruntime numpy --break-system-packages
 ```
+
+> Why not a venv? The Electron app runs the **system** `python3`. A venv-installed
+> Kokoro wouldn't be visible to it — so for this project, system-wide install is
+> the working choice.
 
 ✅ **Check:** `python -c "import kokoro_onnx; print('kokoro-onnx OK')"`
 

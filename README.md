@@ -12,7 +12,7 @@
 > keep your modifications open source. Forking for private/commercial use without
 > releasing your source code is not permitted. See [LICENSE](LICENSE).
 
-Desktop app that **dubs YouTube videos into Hindi (and 19 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
+Desktop app that **dubs YouTube videos into Hindi (and 20 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
 
 Paste a YouTube URL, and the app plays the video while generating and playing a synced dub on top. It pulls the video's captions, translates them to natural spoken Hinglish, synthesizes neural speech, and plays everything in sync — with a live transcript and on-screen subtitles.
 
@@ -50,8 +50,11 @@ The **video plays in a separate mpv window** (full quality). The Electron window
 
 - **Source:** Any language — the app auto-detects via the video's declared language
   and fetches its native captions. Pass `--source-lang <code>` (e.g. `ar`, `zh`, `en`) to force one.
-- **Target:** 20 languages. **Hindi** gets the full casual-creator Hinglish prompt.
-  All other 19 get an energetic, conversational prompt in their own language.
+- **Target:** 21 languages. **Hindi** gets the full educational-instructor Hinglish
+  prompt; the rest get a clear, conversational prompt in their own language.
+- **Voice engine:** **edge-tts** (cloud, all languages) by default, or opt-in
+  **Kokoro-82M** (local, more natural, Hindi/English) via `--tts kokoro` /
+  `YTDUB_TTS=kokoro` — falls back to edge-tts automatically. See [KOKORO_SETUP.md](KOKORO_SETUP.md).
 
 ---
 
@@ -221,7 +224,7 @@ youtube-dubber --url https://youtu.be/VIDEO_ID --lang hindi --gender female --ou
 
 ## Supported languages
 
-Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu, Spanish, French, German, Japanese, Chinese, Korean, Arabic, Portuguese, Russian, Italian.
+Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu, Spanish, French, German, Japanese, Chinese, Korean, Arabic, Portuguese, Russian, Italian, English.
 
 Each has a configured male/female edge-tts neural voice. Indian languages use a **Hinglish/code-switch** style (technical terms stay English); others translate fully. See `backend/youtube_dubber/languages.py`.
 
