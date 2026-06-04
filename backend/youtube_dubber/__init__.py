@@ -17,7 +17,7 @@ Requires the ``yt-dlp``, ``ffmpeg`` system tools and a free Groq API key
 from .core import Dubber, dub, DubError, video_id
 from .languages import LANGUAGES, LangConfig
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "Dubber",

@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "youtube-dubber"
-version = "0.1.1"
+version = "0.1.2"
 description = "Dub any YouTube video into Hindi (and 19 other languages) with a casual, engaging neural voice."
 readme = "README_PYPI.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
-authors = [{ name = "Ashutosh", email = "ashutosh.formin@gmail.com" }]
+# name-only author populates the classic "Author" metadata field (shows on
+# PyPI / stats tools); email kept under maintainers for contact.
+authors = [{ name = "Ashutosh" }]
+maintainers = [{ name = "Ashutosh", email = "ashutosh.formin@gmail.com" }]
 keywords = ["youtube", "dubbing", "translation", "tts", "hindi", "hinglish", "edge-tts", "groq", "whisper"]
 classifiers = [
     "Development Status :: 4 - Beta",
