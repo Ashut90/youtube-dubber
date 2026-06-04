@@ -278,22 +278,44 @@ def add_pauses(text: str) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
-def fit_to_duration(src: str, target_dur: float, lo: float = 0.8, hi: float = 1.2):
-    """Speed-match a clip to its time window with ffmpeg atempo, bounded to a
-    natural [lo, hi] range. BIDIRECTIONAL: slows a too-short clip down to fill
-    the window (no dead air) and gently speeds a too-long clip up (no chipmunk).
-    This is the single pacing authority — synthesis is done at a neutral pace so
-    the two never compound."""
+def fit_to_duration(src: str, target_dur: float,
+                    lo: float = 0.85, hi: float = 1.15, hard_anchor: bool = True):
+    """STRICT CLOCK ANCHOR — constrain a clip to its time window.
+
+    1. Speed-match with ffmpeg atempo, bounded to a natural [lo, hi] range
+       (default 0.85–1.15×): slows a too-short clip to fill the window, gently
+       speeds a too-long clip up. No chipmunk, no dead air.
+    2. hard_anchor (default on): if the clip is STILL longer than the window
+       after the max 1.15× speed-up, trim it to exactly `target_dur` with a short
+       fade-out. This guarantees the clip can NEVER run past its slot — the key
+       to preventing accumulation lag/drift over very long runs.
+
+    Synthesis is done at a neutral pace, so this is the single pacing authority
+    and nothing compounds.
+    """
     actual = get_audio_duration(src)
     if actual <= 0 or target_dur <= 0:
         return
     ratio = actual / target_dur          # >1 → too long (speed up); <1 → too short (slow down)
-    if 0.95 <= ratio <= 1.05:
-        return                            # close enough — leave it natural
-    ratio = max(lo, min(hi, ratio))       # natural bounds, no warping
+    if 0.97 <= ratio <= 1.03 and actual <= target_dur:
+        return                            # already snug and within window — leave it
+
+    speed = max(lo, min(hi, ratio))       # natural speed bound
+    filters = f"atempo={speed:.3f}"
+
+    # Hard anchor: if even max speed-up leaves it over the window, trim + fade.
+    # Trim a hair under target (0.08s) to absorb mp3 re-encode frame padding so
+    # the final file is guaranteed ≤ target_dur.
+    projected = actual / speed
+    if hard_anchor and projected > target_dur + 0.02:
+        trim_end = max(0.10, target_dur - 0.08)
+        fade     = min(0.06, trim_end * 0.1)
+        st       = max(0.0, trim_end - fade)
+        filters += f",atrim=0:{trim_end:.3f},afade=t=out:st={st:.3f}:d={fade:.3f}"
+
     out = src.replace(".mp3", "_f.mp3")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "quiet",
-                    "-i", src, "-af", f"atempo={ratio:.3f}", out], check=False)
+                    "-i", src, "-af", filters, out], check=False)
     if Path(out).exists():
         Path(src).unlink(missing_ok=True)
         Path(out).rename(src)
