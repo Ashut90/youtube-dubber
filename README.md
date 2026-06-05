@@ -26,6 +26,16 @@ This started as my own fix for a problem I kept hitting as a learner. I'm hoping
 
 ---
 
+## Demo
+
+A quick run-through — dubbing a video and switching between languages:
+
+https://github.com/Ashut90/youtube-dubber/releases/download/v0.2.0/youtube-dubber-demo.mp4
+
+*(If the player doesn't load, [watch/download the demo here](https://github.com/Ashut90/youtube-dubber/releases/download/v0.2.0/youtube-dubber-demo.mp4).)*
+
+---
+
 ## What it looks like
 
 ![App UI Preview](assets/ui-preview.svg)
