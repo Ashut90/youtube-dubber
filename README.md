@@ -6,17 +6,23 @@
 [![Discussions](https://img.shields.io/badge/💬-Discuss-blueviolet)](../../discussions)
 [![Download](https://img.shields.io/badge/⬇️-Download%20AppImage-orange.svg)](../../releases/latest)
 
-> **Want to try it or contribute? [Fork this repo](../../fork) — do not clone directly.**
+> If you want to try it or build on it, please **fork the repo** instead of cloning straight —
+> that way you can actually open a PR and contribute back.
 >
-> 🔒 **This project is GPL-3.0 licensed.** You must credit the original author and
-> keep your modifications open source. Forking for private/commercial use without
-> releasing your source code is not permitted. See [LICENSE](LICENSE).
+> It's **GPL-3.0**: build on it all you want, just keep your version open-source and
+> credit the original. Details in [LICENSE](LICENSE).
 
-Desktop app that **dubs YouTube videos into Hindi (and 20 other languages)** with a casual, engaging voice — like an Indian tech YouTuber, not a flat textbook narrator.
+"Learn from anywhere" sounds great — until you find an amazing tutorial and it's in a language you don't understand. That's happened to me more than a few times.
 
-Paste a YouTube URL, and the app plays the video while generating and playing a synced dub on top. It pulls the video's captions, translates them to natural spoken Hinglish, synthesizes neural speech, and plays everything in sync — with a live transcript and on-screen subtitles.
+I'd come across genuinely good, hands-on content, but the language barrier would kill the momentum. I tried following along with slides and auto-generated subtitles, but it just wasn't the same.
 
-A second **Live Dub** mode dubs *any* system audio in real time (browser, media player, calls) by capturing the audio device directly.
+So I built **youtube-dubber** — a tool that actually solves this, for me and hopefully for others. You point it at any YouTube video and it dubs the thing into Hindi (or 20 other languages) with a natural, casual-sounding voice, not a flat robotic narrator.
+
+You get the original video, the dubbed audio, and synced subtitles, all playing together. There's also a **Live Dub** mode that translates anything playing on your machine in real time — a browser, a media player, a call. And it works both as a desktop app and as a Python package you can drop into your own code.
+
+Under the hood I used Groq for fast translation, Whisper for transcription, and good neural voices (with a local option too). It caches everything, so watching the same video again is instant, and it works hard to keep the timing natural.
+
+This started as my own fix for a problem I kept hitting as a learner. I'm hoping it helps other students, developers, and anyone who wants to learn from global content without getting stuck on the language.
 
 ---
 
@@ -34,7 +40,9 @@ The **video plays in a separate mpv window** (full quality). The Electron window
 
 ---
 
-## Two modes at a glance
+## The two modes
+
+There are two ways to use it, depending on what you're dubbing:
 
 | | **Video URL** | **Live Dub** |
 |---|---|---|
@@ -286,7 +294,9 @@ youtube-dubber/
 
 ---
 
-## Known limitations & trade-offs
+## Stuff to know before you expect too much
+
+I'd rather be upfront about the rough edges than have you discover them the hard way:
 
 - **mpv plays in its own window**, not embedded in the app — a deliberate workaround for the Chromium SIGSEGV on Optimus systems.
 - **8b translations are sometimes verbose**, so an occasional long sentence finishes slightly late or gets dropped to stay in sync (never cut mid-word). The cure is shorter translations / a stronger prompt.
@@ -318,29 +328,19 @@ Cache location: `~/.config/yt-dubber/dubout/audio/`.
 
 ---
 
-## Contributing & Discussions
+## Contributing
 
-Found a bug? Have an idea? Want to add a language or improve the dubbing quality?
+I'd genuinely love help on this — more languages, better dubbing quality, bug fixes, anything.
 
-**Don't just fork silently — come talk:**
-
-- 💬 **[Start a Discussion](../../discussions)** — ideas, questions, show your fork
-- 🐛 **[Open an Issue](../../issues)** — bug reports
-- 🔀 **[Submit a PR](../../pulls)** — code contributions (read [CONTRIBUTING.md](CONTRIBUTING.md) first)
-
-If you've built something on top of this project, share it in Discussions — I want to see what people are creating.
+- Found a bug or have an idea? [Open an issue](../../issues) or [start a discussion](../../discussions).
+- Want to send code? Fork it, make your change, and open a PR (there's a short [CONTRIBUTING.md](CONTRIBUTING.md) with the steps).
+- Built something on top of it? Show me in Discussions — I'd really like to see what people make with it.
 
 ---
 
-## Credits & Attribution
+## Credits
 
-**Original project:** YT Dubber  
-**Author:** [Ashutosh (@Ashut90)](https://github.com/Ashut90)  
-**License:** GPL-3.0 — see [LICENSE](LICENSE)
+Built by [Ashutosh (@Ashut90)](https://github.com/Ashut90), GPL-3.0 ([LICENSE](LICENSE)).
+If you fork it, please keep the credit and link back here, say what you changed, and keep your version open-source.
 
-If you fork this project, you **must**:
-1. Keep this credits section or link back to this repo
-2. State clearly what you changed
-3. License your fork under GPL-3.0
-
-Built with: [Groq API](https://groq.com) · [edge-tts](https://github.com/rany2/edge-tts) · [mpv](https://mpv.io) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [Electron](https://www.electronjs.org)
+Standing on the shoulders of: [Groq](https://groq.com) · [edge-tts](https://github.com/rany2/edge-tts) · [Kokoro](https://github.com/thewh1teagle/kokoro-onnx) · [mpv](https://mpv.io) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [Electron](https://www.electronjs.org)
